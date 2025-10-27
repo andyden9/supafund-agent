@@ -1,0 +1,126 @@
+=========================================
+浏览器修复脚本 - 直接复制粘贴
+=========================================
+
+在 http://localhost:3000 的浏览器控制台，复制粘贴下面的完整脚本：
+
+
+=========================================
+脚本开始（包括这一行一起复制）
+=========================================
+(async function fixPearl() {
+  console.log('🔧 Pearl Frontend Fix Script');
+  console.log('='.repeat(60));
+  console.log('');
+
+  // Step 1: Verify backend
+  console.log('1️⃣ Verifying backend...');
+  try {
+    const services = await fetch('http://localhost:8000/api/v2/services').then(r => r.json());
+    console.log(`   ✅ Backend works! Found ${services.length} service(s)`);
+
+    if (services.length > 0) {
+      const service = services[0];
+      console.log('   Service:', service.name, service.service_config_id);
+
+      // Step 2: Set service in localStorage
+      console.log('');
+      console.log('2️⃣ Setting service in localStorage...');
+      localStorage.setItem('pearl_store_selectedService', JSON.stringify(service));
+      localStorage.setItem('pearl_store_isUserLoggedIn', 'true');
+      console.log('   ✅ Service selected');
+
+      // Step 3: Check if QueryClient exists
+      console.log('');
+      console.log('3️⃣ Checking React Query...');
+
+      if (!window.queryClient) {
+        console.log('   ⚠️ QueryClient not exposed to window');
+        console.log('   This is normal - it is in React context');
+      } else {
+        console.log('   ✅ QueryClient accessible');
+        const queries = window.queryClient.getQueryCache().getAll();
+        console.log(`   Current queries: ${queries.length}`);
+      }
+
+      // Step 4: The KEY FIX - Reload to reinitialize providers
+      console.log('');
+      console.log('4️⃣ Reloading page to reinitialize providers...');
+      console.log('   This will:');
+      console.log('   - Reload with service selected');
+      console.log('   - Reload with logged in state');
+      console.log('   - Trigger all queries to start');
+      console.log('');
+      console.log('🔄 Reloading in 2 seconds...');
+
+      setTimeout(() => {
+        window.location.reload();
+      }, 2000);
+
+    } else {
+      console.log('   ❌ No services found in backend');
+      console.log('   Create a service first from the UI');
+    }
+
+  } catch (error) {
+    console.log('   ❌ Backend error:', error.message);
+    console.log('   Make sure daemon is running: ./start_pearl_daemon.sh');
+  }
+})();
+=========================================
+脚本结束（包括这一行一起复制）
+=========================================
+
+
+等待页面重新加载（约5秒），然后检查：
+
+1. 按钮是否变成可点击？
+2. 如果还是灰色，再次运行这个命令查看查询数量：
+
+window.queryClient?.getQueryCache().getAll().length
+
+如果还是0，请运行下面的高级诊断：
+
+
+=========================================
+高级诊断（如果上面的修复无效）
+=========================================
+
+(function() {
+  console.log('🔍 Checking why queries are not running...');
+
+  // Check all provider conditions
+  console.log('');
+  console.log('Provider mount check:');
+
+  // Try to find if providers are mounted
+  const root = document.getElementById('__next');
+  if (!root) {
+    console.log('❌ React root not found');
+    return;
+  }
+
+  console.log('✅ React root exists');
+  console.log('');
+
+  // Check localStorage again
+  console.log('localStorage check:');
+  console.log('  pearl_store_isUserLoggedIn:', localStorage.getItem('pearl_store_isUserLoggedIn'));
+  console.log('  pearl_store_selectedService:', localStorage.getItem('pearl_store_selectedService') ? '✅ Set' : '❌ Not set');
+  console.log('');
+
+  // The nuclear option
+  console.log('🔧 If nothing works, try nuclear option:');
+  console.log('');
+  console.log('A. Stop ALL (daemon + frontend)');
+  console.log('B. Clear browser data:');
+  console.log('   - Close all localhost:3000 tabs');
+  console.log('   - Clear cache in browser settings');
+  console.log('C. Restart daemon: ./start_pearl_daemon.sh');
+  console.log('D. Restart frontend: yarn dev');
+  console.log('E. Open fresh browser tab: http://localhost:3000');
+  console.log('F. Login again');
+})();
+
+
+=========================================

@@ -1,0 +1,310 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Pearl Button Debugger</title>
+    <style>
+        body {
+            font-family: 'Monaco', 'Courier New', monospace;
+            max-width: 1200px;
+            margin: 20px auto;
+            padding: 20px;
+            background: #1e1e1e;
+            color: #d4d4d4;
+        }
+        h1 { color: #4ec9b0; border-bottom: 2px solid #4ec9b0; padding-bottom: 10px; }
+        h2 { color: #569cd6; margin-top: 30px; }
+        .section {
+            background: #252526;
+            padding: 15px;
+            margin: 10px 0;
+            border-left: 3px solid #007acc;
+            border-radius: 4px;
+        }
+        .success { color: #4ec9b0; }
+        .error { color: #f48771; }
+        .warning { color: #dcdcaa; }
+        pre {
+            background: #1e1e1e;
+            padding: 10px;
+            border-radius: 4px;
+            overflow-x: auto;
+            border: 1px solid #3e3e3e;
+        }
+        button {
+            background: #0e639c;
+            color: white;
+            border: none;
+            padding: 12px 24px;
+            margin: 10px 5px;
+            cursor: pointer;
+            border-radius: 4px;
+            font-size: 14px;
+            font-weight: bold;
+        }
+        button:hover { background: #1177bb; }
+        .result { margin-top: 10px; }
+    </style>
+</head>
+<body>
+    <h1>🔍 Pearl Button Debugger</h1>
+    <p>This tool diagnoses why the "Start agent & stake" button is grayed out.</p>
+
+    <div class="section">
+        <button onclick="runFullDiagnosis()">🚀 Run Full Diagnosis</button>
+        <button onclick="clearAllCaches()">🗑️ Clear All Caches & Reload</button>
+        <button onclick="forceRefreshQueries()">🔄 Force Refresh Queries</button>
+    </div>
+
+    <div id="output"></div>
+
+    <script>
+        function log(message, type = 'info') {
+            const output = document.getElementById('output');
+            const className = type === 'error' ? 'error' : type === 'warning' ? 'warning' : type === 'success' ? 'success' : '';
+            output.innerHTML += `<div class="${className}">${message}</div>`;
+        }
+
+        function section(title) {
+            const output = document.getElementById('output');
+            output.innerHTML += `<h2>${title}</h2>`;
+        }
+
+        function pre(data) {
+            const output = document.getElementById('output');
+            output.innerHTML += `<pre>${JSON.stringify(data, null, 2)}</pre>`;
+        }
+
+        function clear() {
+            document.getElementById('output').innerHTML = '';
+        }
+
+        async function runFullDiagnosis() {
+            clear();
+            section('🔍 Full Diagnosis Report');
+
+            try {
+                // Check if we can access parent window
+                const parentWindow = window.opener || window.parent;
+                const targetWindow = parentWindow.location.hostname === 'localhost' ? parentWindow : window;
+
+                // Try to access queryClient from localStorage or window
+                let queryClient = targetWindow.queryClient;
+
+                if (!queryClient) {
+                    log('⚠️ Trying to find queryClient in parent window...', 'warning');
+                    // Try different ways to access it
+                    queryClient = targetWindow.__REACT_QUERY_CLIENT__ ||
+                                  targetWindow.window?.queryClient ||
+                                  window.queryClient;
+                }
+
+                if (!queryClient) {
+                    log('❌ QueryClient not accessible from this window', 'error');
+                    log('💡 Please open this in a new tab from localhost:3000', 'warning');
+                    log('   Or paste the script directly in the browser console on localhost:3000', 'warning');
+                    return;
+                }
+
+                // Get all queries
+                const queries = queryClient.getQueryCache().getAll();
+                log(`✅ Found ${queries.length} total queries`, 'success');
+
+                if (queries.length === 0) {
+                    section('❌ NO QUERIES FOUND');
+                    log('This means the app is not making any API requests.', 'error');
+                    log('Possible causes:', 'warning');
+                    log('  1. User not logged in', 'warning');
+                    log('  2. No service selected', 'warning');
+                    log('  3. App in offline mode', 'warning');
+
+                    section('🔐 Checking localStorage...');
+                    const keys = Object.keys(localStorage);
+                    log(`Found ${keys.length} localStorage keys:`);
+                    pre(keys);
+                    return;
+                }
+
+                // Check balance query
+                section('1️⃣ Balance & Refill Requirements Query');
+                const balanceQuery = queries.find(q =>
+                    JSON.stringify(q.queryKey).includes('BALANCES_AND_REFILL')
+                );
+
+                if (balanceQuery) {
+                    log(`Status: ${balanceQuery.state.status}`, balanceQuery.state.status === 'success' ? 'success' : 'error');
+                    log(`Updated: ${new Date(balanceQuery.state.dataUpdatedAt).toLocaleTimeString()}`);
+
+                    if (balanceQuery.state.data) {
+                        const data = balanceQuery.state.data;
+                        log(`✅ allow_start_agent: ${data.allow_start_agent}`, data.allow_start_agent ? 'success' : 'error');
+                        log(`   is_refill_required: ${data.is_refill_required}`);
+                        pre({
+                            allow_start_agent: data.allow_start_agent,
+                            is_refill_required: data.is_refill_required,
+                            balances: data.balances
+                        });
+                    } else {
+                        log('❌ No data in balance query', 'error');
+                    }
+                } else {
+                    log('❌ Balance query not found!', 'error');
+                    log('   This means the BalancesAndRefillRequirementsProvider is not enabled', 'warning');
+                }
+
+                // Check staking queries
+                section('2️⃣ Staking Contract Queries');
+                const stakingQueries = queries.filter(q =>
+                    JSON.stringify(q.queryKey).includes('STAKING')
+                );
+
+                if (stakingQueries.length === 0) {
+                    log('❌ No staking queries found!', 'error');
+                    log('   This prevents the button from becoming clickable', 'warning');
+                } else {
+                    log(`Found ${stakingQueries.length} staking queries`, 'success');
+                    stakingQueries.forEach((q, i) => {
+                        log(`   ${i + 1}. Status: ${q.state.status}`);
+                        if (q.state.error) {
+                            log(`      ❌ Error: ${q.state.error.message}`, 'error');
+                        }
+                    });
+                }
+
+                // Check service query
+                section('3️⃣ Service Query');
+                const serviceQuery = queries.find(q =>
+                    JSON.stringify(q.queryKey).includes('SERVICE') &&
+                    !JSON.stringify(q.queryKey).includes('SERVICES')
+                );
+
+                if (serviceQuery) {
+                    log(`Status: ${serviceQuery.state.status}`, 'success');
+                    log(`Has service data: ${!!serviceQuery.state.data}`);
+                } else {
+                    log('⚠️ Service query not found', 'warning');
+                }
+
+                // Check loading states
+                section('4️⃣ Loading States');
+                const loading = queries.filter(q => q.state.status === 'loading');
+                const pending = queries.filter(q => q.state.status === 'pending');
+
+                log(`Loading: ${loading.length} queries`);
+                log(`Pending: ${pending.length} queries`);
+
+                if (loading.length > 0) {
+                    log('   ⏳ Queries still loading:', 'warning');
+                    loading.forEach(q => log(`      - ${JSON.stringify(q.queryKey)}`));
+                }
+
+                // Summary
+                section('📊 SUMMARY');
+                const success = queries.filter(q => q.state.status === 'success').length;
+                const errors = queries.filter(q => q.state.status === 'error').length;
+
+                log(`✅ Successful: ${success}`);
+                log(`❌ Failed: ${errors}`);
+                log(`⏳ Loading: ${loading.length}`);
+                log(`⏸️ Pending: ${pending.length}`);
+
+                // Root cause analysis
+                section('🎯 ROOT CAUSE ANALYSIS');
+
+                if (!balanceQuery) {
+                    log('❌ CRITICAL: Balance query not running', 'error');
+                    log('   Possible causes:', 'warning');
+                    log('   1. User not logged in (check UI)', 'warning');
+                    log('   2. Service not selected', 'warning');
+                    log('   3. isOnline = false', 'warning');
+                    log('');
+                    log('🔧 Fix: Make sure you are logged in and a service is selected', 'warning');
+                } else if (stakingQueries.length === 0) {
+                    log('❌ CRITICAL: Staking queries not running', 'error');
+                    log('   The button requires staking contract info to be loaded', 'warning');
+                    log('   Check: isAllStakingContractDetailsRecordLoaded = false', 'warning');
+                    log('');
+                    log('🔧 Fix: Check RPC connectivity for staking contract calls', 'warning');
+                } else if (balanceQuery.state.data?.allow_start_agent === false) {
+                    log('❌ Backend says: Cannot start agent', 'error');
+                    log('   Check funding requirements', 'warning');
+                } else if (balanceQuery.state.data?.allow_start_agent === true && stakingQueries.every(q => q.state.status === 'success')) {
+                    log('✅ ALL CHECKS PASS! Button should be clickable!', 'success');
+                    log('');
+                    log('🤔 If button is still grayed, try:', 'warning');
+                    log('   1. Wait 5 more seconds', 'warning');
+                    log('   2. Hard refresh: Cmd+Shift+R', 'warning');
+                    log('   3. Click "Force Refresh Queries" button above', 'warning');
+                } else {
+                    log('⏳ Some queries still loading or failing', 'warning');
+                    log('   Wait a few seconds and run diagnosis again', 'warning');
+                }
+
+            } catch (error) {
+                log('❌ Error running diagnosis: ' + error.message, 'error');
+                log('💡 This tool should be opened from localhost:3000', 'warning');
+                pre(error);
+            }
+        }
+
+        function clearAllCaches() {
+            if (confirm('This will clear all caches and reload. Continue?')) {
+                log('🗑️ Clearing localStorage...', 'warning');
+                localStorage.clear();
+                log('🗑️ Clearing sessionStorage...', 'warning');
+                sessionStorage.clear();
+
+                const queryClient = window.queryClient || window.opener?.queryClient || window.parent?.queryClient;
+                if (queryClient) {
+                    log('🗑️ Clearing React Query cache...', 'warning');
+                    queryClient.clear();
+                }
+
+                log('✅ All caches cleared!', 'success');
+                log('🔄 Reloading in 2 seconds...', 'warning');
+                setTimeout(() => location.reload(), 2000);
+            }
+        }
+
+        function forceRefreshQueries() {
+            clear();
+            section('🔄 Force Refreshing All Queries');
+
+            try {
+                const queryClient = window.queryClient || window.opener?.queryClient || window.parent?.queryClient;
+
+                if (!queryClient) {
+                    log('❌ QueryClient not accessible', 'error');
+                    return;
+                }
+
+                const queries = queryClient.getQueryCache().getAll();
+                log(`Found ${queries.length} queries to refresh`, 'success');
+
+                // Invalidate all queries
+                queryClient.invalidateQueries();
+                log('✅ All queries invalidated', 'success');
+                log('⏳ Waiting for refresh...', 'warning');
+
+                setTimeout(() => {
+                    log('✅ Refresh complete! Check if button is now clickable', 'success');
+                }, 3000);
+
+            } catch (error) {
+                log('❌ Error: ' + error.message, 'error');
+            }
+        }
+
+        // Auto-run on load
+        window.addEventListener('load', () => {
+            log('🎯 Pearl Button Debugger Loaded', 'success');
+            log('Click "Run Full Diagnosis" to start', 'warning');
+            log('');
+            log('⚠️ IMPORTANT: This page should be opened FROM localhost:3000', 'warning');
+            log('   Method: Right-click on localhost:3000 → Inspect → Console', 'warning');
+            log('   Then paste the script from BROWSER_DEBUG.md', 'warning');
+        });
+    </script>
+</body>
+</html>

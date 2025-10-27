@@ -1,0 +1,102 @@
+=========================================
+Pearl Button Debug - Step by Step
+=========================================
+
+在浏览器 http://localhost:3000 打开控制台（F12 或 Cmd+Option+I）
+然后依次复制粘贴下面的命令：
+
+=========================================
+步骤 1: 检查查询数量
+=========================================
+
+window.queryClient?.getQueryCache().getAll().length
+
+期望结果: 应该 > 0（比如 10-20）
+如果是 0: 说明未登录或服务未选中
+
+
+=========================================
+步骤 2: 检查余额查询
+=========================================
+
+window.queryClient?.getQueryCache().getAll().find(q => JSON.stringify(q.queryKey).includes('BALANCES'))?.state.data?.allow_start_agent
+
+期望结果: true
+如果是 undefined: 余额查询未运行
+如果是 false: 后端说资金不足
+
+
+=========================================
+步骤 3: 检查 Staking 查询数量
+=========================================
+
+window.queryClient?.getQueryCache().getAll().filter(q => JSON.stringify(q.queryKey).includes('STAKING')).length
+
+期望结果: 应该 > 0（至少 2-3 个）
+如果是 0: 这就是按钮灰色的原因！
+
+
+=========================================
+步骤 4: 检查失败的查询
+=========================================
+
+window.queryClient?.getQueryCache().getAll().filter(q => q.state.status === 'error').map(q => ({ key: q.queryKey, error: q.state.error?.message }))
+
+期望结果: 空数组 []
+如果有错误: 记录错误信息
+
+
+=========================================
+步骤 5: 检查 isAllStakingContractDetailsRecordLoaded
+=========================================
+
+这是最关键的！在控制台复制这个：
+
+(() => { const q = window.queryClient?.getQueryCache().getAll() || []; const stakingCount = q.filter(x => JSON.stringify(x.queryKey).includes('STAKING_CONTRACT_DETAILS')).length; const stakingSuccess = q.filter(x => JSON.stringify(x.queryKey).includes('STAKING_CONTRACT_DETAILS') && x.state.status === 'success').length; console.log('🏦 Staking Contract Details:', { total: stakingCount, success: stakingSuccess, allLoaded: stakingCount > 0 && stakingCount === stakingSuccess }); return stakingCount > 0 && stakingCount === stakingSuccess; })()
+
+期望结果: true
+如果是 false: 这就是按钮灰色的根本原因！
+
+
+=========================================
+步骤 6: 如果 Staking 查询为 0，强制触发
+=========================================
+
+window.queryClient?.invalidateQueries()
+
+然后等待 3 秒，再运行步骤 3 检查
+
+
+=========================================
+步骤 7: 清除缓存并重新登录（最后手段）
+=========================================
+
+localStorage.clear(); location.reload();
+
+这会清除所有数据，需要重新登录
+
+
+=========================================
+快速诊断（一次性）
+=========================================
+
+复制下面这整段（选中全部，包括括号）:
+
+(() => { const q = window.queryClient?.getQueryCache().getAll() || []; console.log('📊 Quick Diagnosis:'); console.log('  Queries:', q.length); console.log('  Balance allow_start:', q.find(x => JSON.stringify(x.queryKey).includes('BALANCES'))?.state.data?.allow_start_agent); console.log('  Staking queries:', q.filter(x => JSON.stringify(x.queryKey).includes('STAKING')).length); console.log('  Failed:', q.filter(x => x.state.status === 'error').length); console.log('  Loading:', q.filter(x => x.state.status === 'loading').length); })()
+
+
+=========================================
+强制刷新所有查询
+=========================================
+
+window.queryClient?.invalidateQueries(); console.log('✅ All queries invalidated, wait 3 seconds...')
+
+
+=========================================
+检查 RPC CORS 问题
+=========================================
+
+fetch('https://gnosis-mainnet.g.alchemy.com/v2/k72mJduMTVP0-6rwv2f1m', { method: 'POST', headers: { 'Content-Type': 'application/json' }, body: JSON.stringify({ jsonrpc: '2.0', method: 'eth_blockNumber', params: [], id: 1 }) }).then(r => r.json()).then(d => console.log('✅ Alchemy RPC works:', d)).catch(e => console.log('❌ RPC error:', e))
+
+
+=========================================

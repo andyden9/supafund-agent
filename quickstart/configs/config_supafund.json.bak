@@ -1,0 +1,198 @@
+{
+    "name": "Supafund Agent",
+    "hash": "bafybeihvqgjcq2g4nauxiryholvy6tuwxxrkq7ec236tgca2b6qagy6gvu",
+    "description": "Predicts whether emerging projects will achieve key milestones, providing detailed AI-powered analysis",
+    "image": "https://operate.olas.network/_next/image?url=%2Fimages%2Fprediction-agent.png&w=3840&q=75",
+    "service_version": "v0.1.0",
+    "home_chain": "gnosis",
+    "configurations": {
+        "gnosis": {
+            "agent_id": 14,
+            "nft": "bafybeig64atqaladigoc3ds4arltdu63wkdrk3gesjfvnfdmz35amv7faq",
+            "threshold": 1,
+            "use_mech_marketplace": true,
+            "fund_requirements": {
+                "0x0000000000000000000000000000000000000000": {
+                    "agent": 100000000000000000,
+                    "safe": 5000000000000000000
+                }
+            }
+        }
+    },
+    "env_variables": {
+        "GNOSIS_LEDGER_RPC": {
+            "name": "Gnosis ledger RPC",
+            "description": "",
+            "value": "",
+            "provision_type": "computed"
+        },
+        "STAKING_CONTRACT_ADDRESS": {
+            "name": "Staking contract address",
+            "description": "",
+            "value": "",
+            "provision_type": "computed"
+        },
+        "MECH_ACTIVITY_CHECKER_CONTRACT": {
+            "name": "Mech activity checker contract",
+            "description": "",
+            "value": "",
+            "provision_type": "computed"
+        },
+        "MECH_CONTRACT_ADDRESS": {
+            "name": "Mech contract address",
+            "description": "",
+            "value": "",
+            "provision_type": "computed"
+        },
+        "PRIORITY_MECH_ADDRESS": {
+            "name": "Priority Mech contract address",
+            "description": "This mech will be used at priority when using mech marketplace.",
+            "value": "0x552cEA7Bc33CbBEb9f1D90c1D11D2C6daefFd053",
+            "provision_type": "user"
+        },
+        "PRIORITY_MECH_SERVICE_ID": {
+            "name": "Priority Mech service ID",
+            "description": "This mech of this service will be used at priority when using mech marketplace.",
+            "value": "975",
+            "provision_type": "user"
+        },
+        "MECH_REQUEST_PRICE": {
+            "name": "Mech request price",
+            "description": "",
+            "value": "",
+            "provision_type": "computed"
+        },
+        "MECH_MARKETPLACE_CONFIG": {
+            "name": "Mech marketplace config",
+            "description": "",
+            "value": "",
+            "provision_type": "computed"
+        },
+        "USE_MECH_MARKETPLACE": {
+            "name": "Use mech marketplace",
+            "description": "",
+            "value": "",
+            "provision_type": "computed"
+        },
+        "USE_MULTI_BETS_MODE": {
+            "name": "Use multi bets mode",
+            "description": "",
+            "value": "true",
+            "provision_type": "fixed"
+        },
+        "ENABLE_POSITION_REVIEW": {
+            "name": "Enable position review",
+            "description": "",
+            "value": "false",
+            "provision_type": "fixed"
+        },
+        "TRADING_STRATEGY": {
+            "name": "Trading strategy",
+            "description": "",
+            "value": "bet_amount_per_threshold",
+            "provision_type": "fixed"
+        },
+        "TOOLS_ACCURACY_HASH": {
+            "name": "Tools accuracy hash",
+            "description": "",
+            "value": "QmWgsqncF22hPLNTyWtDzVoKPJ9gmgR1jcuLL5t31xyzzr",
+            "provision_type": "fixed"
+        },
+        "ACC_INFO_FIELDS_REQUESTS": {
+            "name": "Acc info fields requests",
+            "description": "",
+            "value": "nr_responses",
+            "provision_type": "fixed"
+        },
+        "IRRELEVANT_TOOLS": {
+            "name": "Irrelevant tools",
+            "description": "",
+            "value": "[\"native-transfer\",\"prediction-online-lite\",\"claude-prediction-online-lite\",\"prediction-online-sme-lite\",\"prediction-request-reasoning-lite\",\"prediction-request-reasoning-claude-lite\",\"prediction-offline-sme\",\"deepmind-optimization\",\"deepmind-optimization-strong\",\"openai-gpt-3.5-turbo\",\"openai-gpt-3.5-turbo-instruct\",\"openai-gpt-4\",\"openai-text-davinci-002\",\"openai-text-davinci-003\",\"prediction-online-sum-url-content\",\"prediction-online-summarized-info\",\"stabilityai-stable-diffusion-512-v2-1\",\"stabilityai-stable-diffusion-768-v2-1\",\"stabilityai-stable-diffusion-v1-5\",\"stabilityai-stable-diffusion-xl-beta-v2-2-2\",\"prediction-url-cot-claude\",\"prediction-url-cot\",\"resolve-market-reasoning-gpt-4.1\"]",
+            "provision_type": "fixed"
+        },
+        "CREATOR_PER_SUBGRAPH": {
+            "name": "Creator per subgraph",
+            "description": "",
+            "value": "{\"omen_subgraph\":[\"0xAFD5806E1fc7f706236e2F294ab1745A26bDB720\"]}",
+            "provision_type": "fixed"
+        },
+        "SUBGRAPH_API_KEY": {
+            "name": "Subgraph API key",
+            "description": "Subgraph API key can be obtained at https://thegraph.com/studio/apikeys/",
+            "value": "",
+            "provision_type": "user"
+        },
+        "CONDITIONAL_TOKENS_SUBGRAPH_URL": {
+            "name": "Conditional tokens subgraph URL",
+            "description": "",
+            "value": "https://gateway-arbitrum.network.thegraph.com/api/{SUBGRAPH_API_KEY}/subgraphs/id/7s9rGBffUTL8kDZuxvvpuc46v44iuDarbrADBFw5uVp2",
+            "provision_type": "computed"
+        },
+        "NETWORK_SUBGRAPH_URL": {
+            "name": "Network subgraph URL",
+            "description": "",
+            "value": "https://gateway-arbitrum.network.thegraph.com/api/{SUBGRAPH_API_KEY}/subgraphs/id/FxV6YUix58SpYmLBwc9gEHkwjfkqwe1X5FJQjn8nKPyA",
+            "provision_type": "computed"
+        },
+        "OMEN_SUBGRAPH_URL": {
+            "name": "Omen subgraph URL",
+            "description": "",
+            "value": "https://gateway-arbitrum.network.thegraph.com/api/{SUBGRAPH_API_KEY}/subgraphs/id/9fUVQpFwzpdWS9bq5WkAnmKbNNcoBwatMR4yZq81pbbz",
+            "provision_type": "computed"
+        },
+        "REALITIO_SUBGRAPH_URL": {
+            "name": "Realitio subgraph URL",
+            "description": "",
+            "value": "https://gateway-arbitrum.network.thegraph.com/api/{SUBGRAPH_API_KEY}/subgraphs/id/E7ymrCnNcQdAAgLbdFWzGE5mvr5Mb5T9VfT43FqA7bNh",
+            "provision_type": "computed"
+        },
+        "TRADES_SUBGRAPH_URL": {
+            "name": "Trades subgraph URL",
+            "description": "",
+            "value": "https://gateway-arbitrum.network.thegraph.com/api/{SUBGRAPH_API_KEY}/subgraphs/id/9fUVQpFwzpdWS9bq5WkAnmKbNNcoBwatMR4yZq81pbbz",
+            "provision_type": "computed"
+        },
+        "SUPAFUND_WEIGHTS": {
+            "name": "Supafund agent weights configuration",
+            "description": "JSON string with weights for: founder_team, market_opportunity, technical_analysis, social_sentiment, tokenomics",
+            "value": "{\"founder_team\":20,\"market_opportunity\":20,\"technical_analysis\":20,\"social_sentiment\":20,\"tokenomics\":20}",
+            "provision_type": "user"
+        },
+        "SUPAFUND_API_ENDPOINT": {
+            "name": "Supafund API endpoint",
+            "description": "API endpoint for Supafund backend services",
+            "value": "",
+            "provision_type": "user"
+        },
+        "SUPAFUND_MARKET_CREATORS": {
+            "name": "Supafund market creator addresses",
+            "description": "List of addresses that create Supafund prediction markets",
+            "value": "[\"0xAFD5806E1fc7f706236e2F294ab1745A26bDB720\"]",
+            "provision_type": "fixed"
+        },
+        "MIN_EDGE_THRESHOLD": {
+            "name": "Minimum edge threshold",
+            "description": "Minimum edge percentage required to place a bet",
+            "value": "5",
+            "provision_type": "user"
+        },
+        "RISK_TOLERANCE": {
+            "name": "Risk tolerance",
+            "description": "Risk tolerance level (1-10)",
+            "value": "5",
+            "provision_type": "user"
+        },
+        "OPENING_MARGIN": {
+            "name": "Opening margin",
+            "description": "Time buffer (in seconds) before market opens to start analyzing. Set to 3600 (1 hour) for short-term markets.",
+            "value": "560000",
+            "provision_type": "fixed"
+        },
+        "OPEN_AUTONOMY_TM_WRITE_TO_LOG": {
+            "name": "Open Autonomy TM Write to Log",
+            "description": "",
+            "value": "false",
+            "provision_type": "fixed"
+        }
+    }
+}

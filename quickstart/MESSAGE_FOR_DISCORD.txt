@@ -1,0 +1,105 @@
+Hi OLAS Team,
+
+I'm working on integrating a Supafund Agent using the Trader Quickstart, and I wanted to share some technical challenges I've encountered that are taking longer than expected to resolve.
+
+## TL;DR
+After 22+ hours of debugging, I've made significant progress but need a weekend extension (2-3 days) to properly complete and test the integration.
+
+## Technical Issues Encountered
+
+1. **Python Environment** (~2h)
+   - Python 3.12 incompatibility (requires <3.12)
+   - PYENV_VERSION env var conflicts
+   - packaging version conflicts with open-aea
+
+2. **Blockchain Transaction Timeouts** (~4h)
+   - Default 60s timeout insufficient for Gnosis chain
+   - RPC node performance issues
+   - Had to modify autonomy/chain/tx.py to increase timeout 10x
+
+3. **Docker Configuration** (~3h)
+   - Missing Docker image tags
+   - Missing /data/ and /benchmarks/ volume mounts in templates
+   - Had to patch autonomy/deploy/generators/docker_compose/templates.py
+
+4. **RPC Configuration Split** (~6h) ⭐ Most Complex
+   - System has TWO separate RPC config mechanisms:
+     a) Ledger Connection (needs RPC_0 env var)
+     b) Funds Manager Skill (has its own RPC config)
+   
+   - config.json RPC is only mapped to SKILL_FUNDS_MANAGER
+   - NOT mapped to RPC_0 → ledger connection uses default localhost:8545
+   - Result: 139+ connection refused errors, agent stuck in check_stop_trading_round
+   
+   - This appears to be a deployment generator gap/bug
+   - Workaround: manually add "RPC_0=..." to agent_0.env
+
+5. **OPENING_MARGIN Semantics** (~3h)
+   - Counter-intuitive: larger OPENING_MARGIN filters OUT more markets
+   - Query: openingTimestamp_gt: (current_time + OPENING_MARGIN)
+   - Means: find markets that close AT LEAST OPENING_MARGIN in the future
+   - Setting it to 6.5 days filtered out all markets closing in 4.3 days
+
+6. **Language Filtering** (~2h)
+   - Default: ["en_US"]
+   - Supafund markets: "en"
+   - Mismatch → all markets filtered
+
+7. **Fund Management** (~2h)
+   - Deleting .operate/services creates new Service Safe each time
+   - Lost ~20 xDAI locked in abandoned Safes
+   - Documentation doesn't clearly warn against this
+
+**Total debugging time: 22+ hours**
+
+## Progress Made
+
+✅ Service successfully deployed
+✅ Markets successfully retrieved
+✅ Created comprehensive fixes and documentation:
+   - Modified timeout configs
+   - Patched Docker templates
+   - Created helper scripts
+   - Wrote 5 detailed troubleshooting documents
+
+⚠️ Currently fixing: RPC_0 configuration for ledger connection
+
+## Remaining Work (~20 hours)
+
+- Fix RPC config: 2h
+- Implement Supafund analysis logic: 8h
+- Testing and optimization: 4h
+- Pearl integration testing: 4h
+- Documentation: 2h
+
+## Request
+
+Could we extend the deadline to Monday (additional 2-3 days)?
+
+This would allow us to:
+- Properly test all functionality
+- Ensure code quality
+- Provide complete documentation
+- Deliver a stable, reliable product
+
+## Feedback for OLAS Team
+
+The Autonomy framework is powerful, but for quickstart/prototyping, it may be overly complex. Some suggestions:
+
+1. **Documentation**: Add troubleshooting guide for common issues (RPC config, volume mounts, OPENING_MARGIN semantics)
+
+2. **Config Generator**: Auto-map config.json RPC to RPC_0 env var
+
+3. **Docker Templates**: Include /data/ and /benchmarks/ mounts by default
+
+4. **Simple Template**: Consider a "simple agent" template for Pearl integration that doesn't require the full Autonomy stack
+
+We're committed to completing this and contributing back our fixes and documentation. We just need reasonable time to ensure quality over rushing a buggy product.
+
+Thank you for your understanding!
+
+Best regards,
+Andy
+
+---
+Attached: Detailed technical reports (TROUBLESHOOTING_REPORT.md, NETWORK_ERROR_DIAGNOSIS.md, etc.)

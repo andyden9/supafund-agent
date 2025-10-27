@@ -1,0 +1,55 @@
+=========================================
+简单诊断 - 请依次运行并告诉我每个结果
+=========================================
+
+命令1: 检查 QueryClient 是否存在
+-----------------------------------
+window.queryClient
+
+
+命令2: 检查 OnlineStatus context
+-----------------------------------
+(() => { let elem = document.querySelector('[data-online-status]'); if (!elem) { elem = document.querySelector('#__next'); } const keys = Object.keys(elem || {}).filter(k => k.includes('Fiber') || k.includes('Instance')); console.log('React keys:', keys.length > 0 ? '✅ Found' : '❌ Not found'); console.log('navigator.onLine:', navigator.onLine); return navigator.onLine; })()
+
+
+命令3: 检查后端是否可访问
+-----------------------------------
+fetch('http://localhost:8000/api/v2/services').then(r => r.json()).then(d => ({ count: d.length, services: d.map(s => ({ id: s.service_config_id, name: s.name })) }))
+
+
+命令4: 检查登录API
+-----------------------------------
+fetch('http://localhost:8000/api/account').then(r => r.json())
+
+
+命令5: 检查当前页面状态
+-----------------------------------
+window.location.pathname
+
+
+命令6: 手动创建查询并监听
+-----------------------------------
+如果上面的命令3返回了服务数据，运行这个：
+
+window.testQuery = window.queryClient?.fetchQuery({ queryKey: ['TEST_SERVICES'], queryFn: () => fetch('http://localhost:8000/api/v2/services').then(r => r.json()) }); window.testQuery
+
+
+命令7: 等5秒后检查查询缓存
+-----------------------------------
+setTimeout(() => { const q = window.queryClient?.getQueryCache().getAll() || []; console.log('After 5s - Queries:', q.length); console.log('Services query:', q.find(x => JSON.stringify(x.queryKey).includes('SERVICES'))); }, 5000)
+
+
+=========================================
+关键问题定位
+=========================================
+
+如果命令6成功返回数据，但queryCache还是0:
+→ 说明QueryClient工作，但providers的查询没有被启用
+
+如果命令4返回401或错误:
+→ 后端未登录（即使前端显示已登录）
+
+如果命令3失败:
+→ 后端daemon未运行或地址不对
+
+=========================================
