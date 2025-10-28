@@ -27,10 +27,10 @@ echo "════════════════════════�
 echo ""
 
 # Path to the middleware directory
-MIDDLEWARE_DIR="/Users/andydeng/Downloads/supafund-agent/olas-operate-middleware"
+MIDDLEWARE_DIR="/Users/andydeng/Downloads/supafund-agent/supafund-agent/olas-operate-middleware"
 
 # Path to the quickstart workspace whose .operate directory should be managed
-QUICKSTART_HOME="/Users/andydeng/Downloads/supafund-agent/quickstart/.operate"
+QUICKSTART_HOME="/Users/andydeng/Downloads/supafund-agent/supafund-agent/quickstart/.operate"
 
 # Check if middleware directory exists
 if [ ! -d "$MIDDLEWARE_DIR" ]; then
