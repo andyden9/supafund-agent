@@ -2,12 +2,19 @@ import { ApiOutlined, InboxOutlined } from '@ant-design/icons';
 import { useQuery } from '@tanstack/react-query';
 import { Button, Card, Collapse, Flex, Spin, Typography } from 'antd';
 import { isEmpty, isNull } from 'lodash';
-import { CSSProperties, ReactNode, useContext, useMemo } from 'react';
+import {
+  CSSProperties,
+  ReactNode,
+  useCallback,
+  useContext,
+  useMemo,
+} from 'react';
 
 import { COLOR } from '@/constants/colors';
 import { FIVE_SECONDS_INTERVAL } from '@/constants/intervals';
 import { REACT_QUERY_KEYS } from '@/constants/react-query-keys';
 import { NA } from '@/constants/symbols';
+import { BACKEND_URL_V2 } from '@/constants/urls';
 import { OnlineStatusContext } from '@/context/OnlineStatusProvider';
 import { useElectronApi } from '@/hooks/useElectronApi';
 import { useService } from '@/hooks/useService';
@@ -65,14 +72,31 @@ export const AgentActivityPage = () => {
 
   const { selectedService } = useServices();
   const { isServiceRunning } = useService(selectedService?.service_config_id);
+  const serviceConfigId = selectedService?.service_config_id;
   const healthCheck = electronApi?.healthCheck;
 
+  const fetchHealthCheckFromMiddleware = useCallback(async () => {
+    if (!serviceConfigId) return { response: null };
+
+    const response = await fetch(
+      `${BACKEND_URL_V2}/service/${serviceConfigId}/deployment`,
+    );
+    if (!response.ok) {
+      throw new Error('Failed to fetch healthcheck');
+    }
+    const payload = await response.json();
+    return {
+      response:
+        payload && 'healthcheck' in payload ? payload.healthcheck : null,
+    };
+  }, [serviceConfigId]);
+
   const { data, isLoading, isError, refetch } = useQuery({
-    queryKey: REACT_QUERY_KEYS.AGENT_ACTIVITY,
+    queryKey: REACT_QUERY_KEYS.AGENT_ACTIVITY(serviceConfigId),
     queryFn: async () => {
       if (!healthCheck) {
-        // In browser builds or when the Electron API is unavailable, return null to avoid undefined results
-        return null;
+        // In browser builds or when the Electron API is unavailable, fetch from middleware API instead.
+        return fetchHealthCheckFromMiddleware();
       }
 
       const result = await healthCheck();
@@ -87,10 +111,14 @@ export const AgentActivityPage = () => {
       const roundsInfo = data.response?.rounds_info;
       return { rounds, roundsInfo };
     },
-    enabled: isServiceRunning && Boolean(healthCheck),
+    enabled:
+      isServiceRunning &&
+      !!serviceConfigId &&
+      (Boolean(healthCheck) || isOnline),
     refetchOnWindowFocus: false,
     refetchInterval: (query) => {
       if (query.state.error) return false; // Stop refetching when there's an error
+      if (healthCheck) return FIVE_SECONDS_INTERVAL;
       return isOnline ? FIVE_SECONDS_INTERVAL : false;
     },
   });

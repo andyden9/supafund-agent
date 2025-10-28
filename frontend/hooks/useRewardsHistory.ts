@@ -10,6 +10,10 @@ import { STAKING_PROGRAM_ADDRESS } from '@/config/stakingPrograms';
 import { REACT_QUERY_KEYS } from '@/constants/react-query-keys';
 import { REWARDS_HISTORY_SUBGRAPH_URLS_BY_EVM_CHAIN } from '@/constants/urls';
 import { EvmChainId } from '@/enums/Chain';
+import {
+  STAKING_PROGRAM_IDS,
+  StakingProgramId,
+} from '@/enums/StakingProgram';
 import { Address } from '@/types/Address';
 import { Nullable } from '@/types/Util';
 import { asMiddlewareChain } from '@/utils/middlewareHelpers';
@@ -17,6 +21,7 @@ import { ONE_DAY_IN_MS } from '@/utils/time';
 
 import { useService } from './useService';
 import { useServices } from './useServices';
+import { useStakingProgram } from './useStakingProgram';
 
 const CheckpointGraphResponseSchema = z.object({
   epoch: z.string({
@@ -40,9 +45,19 @@ const CheckpointGraphResponseSchema = z.object({
   contractAddress: z.string({
     message: 'Expected contractAddress to be a valid Ethereum address',
   }),
+  availableRewards: z
+    .string({
+      message: 'Expected availableRewards to be a string',
+    })
+    .optional()
+    .nullable(),
 });
 const CheckpointsGraphResponseSchema = z.array(CheckpointGraphResponseSchema);
 type CheckpointResponse = z.infer<typeof CheckpointGraphResponseSchema>;
+
+type UseContractCheckpointsOptions = {
+  treatMissingServiceIdsAsSelfFor?: Set<string>;
+};
 
 const fetchRewardsQuery = (chainId: EvmChainId) => {
   const supportedStakingContracts = Object.values(
@@ -78,6 +93,7 @@ export type Checkpoint = {
   rewards: string[];
   serviceIds: string[];
   blockTimestamp: string;
+  availableRewards?: string | null;
   transactionHash: string;
   epochLength: string;
   contractAddress: string;
@@ -102,6 +118,7 @@ const useTransformCheckpoints = () => {
       serviceId: number,
       checkpoints: CheckpointResponse[],
       timestampToIgnore?: null | number,
+      options?: { treatMissingServiceIdsAsSelf?: boolean },
     ) => {
       if (!checkpoints || checkpoints.length === 0) return [];
       if (!serviceId) return [];
@@ -113,12 +130,28 @@ const useTransformCheckpoints = () => {
               (id) => Number(id) === serviceId,
             ) ?? -1;
 
-          let reward = '0';
+          const treatMissingServiceIdsAsSelf =
+            options?.treatMissingServiceIdsAsSelf &&
+            (checkpoint.serviceIds?.length ?? 0) === 0;
+
+          let rewardSource = '0';
+          let earned = false;
 
           if (serviceIdIndex !== -1) {
             const currentReward = checkpoint.rewards?.[serviceIdIndex];
             const isRewardFinite = isFinite(Number(currentReward));
-            reward = isRewardFinite ? currentReward ?? '0' : '0';
+            rewardSource = isRewardFinite ? currentReward ?? '0' : '0';
+            earned = serviceIdIndex !== -1;
+          } else if (treatMissingServiceIdsAsSelf) {
+            const fallbackReward =
+              checkpoint.availableRewards ??
+              checkpoint.rewards?.[0] ??
+              '0';
+            const isRewardFinite = isFinite(Number(fallbackReward));
+            rewardSource = isRewardFinite ? fallbackReward ?? '0' : '0';
+            earned = isRewardFinite
+              ? Number(fallbackReward ?? '0') > 0
+              : false;
           }
 
           // If the epoch is 0, it means it's the first epoch else,
@@ -134,12 +167,17 @@ const useTransformCheckpoints = () => {
             checkpoint.contractAddress as Address,
           );
 
+          const normalizedServiceIds = treatMissingServiceIdsAsSelf
+            ? [...(checkpoint.serviceIds ?? []), `${serviceId}`]
+            : checkpoint.serviceIds ?? [];
+
           return {
             ...checkpoint,
+            serviceIds: normalizedServiceIds,
             epochEndTimeStamp: Number(checkpoint.blockTimestamp ?? Date.now()),
             epochStartTimeStamp: Number(epochStartTimeStamp),
-            reward: Number(ethers.utils.formatUnits(reward, 18)),
-            earned: serviceIdIndex !== -1,
+            reward: Number(ethers.utils.formatUnits(rewardSource, 18)),
+            earned,
             contractName: stakingContractId,
           };
         })
@@ -169,11 +207,23 @@ type CheckpointsResponse = { checkpoints: CheckpointResponse[] };
 const useContractCheckpoints = (
   chainId: EvmChainId,
   serviceId: Maybe<number>,
+  options?: UseContractCheckpointsOptions,
 ) => {
   const transformCheckpoints = useTransformCheckpoints();
 
+  const fallbackKey = useMemo(() => {
+    if (!options?.treatMissingServiceIdsAsSelfFor) return null;
+    return Array.from(options.treatMissingServiceIdsAsSelfFor)
+      .map((address) => address.toLowerCase())
+      .sort()
+      .join('|');
+  }, [options?.treatMissingServiceIdsAsSelfFor]);
+
   return useQuery({
-    queryKey: REACT_QUERY_KEYS.REWARDS_HISTORY_KEY(chainId, serviceId!),
+    queryKey: [
+      ...REACT_QUERY_KEYS.REWARDS_HISTORY_KEY(chainId, serviceId!),
+      fallbackKey,
+    ] as const,
     queryFn: async () => {
       const checkpointsResponse = await request<CheckpointsResponse>(
         REWARDS_HISTORY_SUBGRAPH_URLS_BY_EVM_CHAIN[chainId],
@@ -215,9 +265,15 @@ const useContractCheckpoints = (
 
         // check if the service has participated in the staking contract
         // if not, skip the contract
-        const isServiceParticipatedInContract = checkpoints.some((checkpoint) =>
-          checkpoint.serviceIds.includes(`${serviceId}`),
-        );
+        const shouldTreatMissingServiceIdsAsSelf =
+          options?.treatMissingServiceIdsAsSelfFor?.has(
+            stakingContractAddress.toLowerCase(),
+          ) ?? false;
+
+        const isServiceParticipatedInContract =
+          checkpoints.some((checkpoint) =>
+            checkpoint.serviceIds.includes(`${serviceId}`),
+          ) || shouldTreatMissingServiceIdsAsSelf;
         if (!isServiceParticipatedInContract) return acc;
 
         // transform the checkpoints, includes epoch start and end time, rewards, etc
@@ -225,6 +281,10 @@ const useContractCheckpoints = (
           serviceId,
           checkpoints,
           null,
+          {
+            treatMissingServiceIdsAsSelf:
+              shouldTreatMissingServiceIdsAsSelf,
+          },
         );
 
         return { ...acc, [stakingContractAddress]: transformedCheckpoints };
@@ -241,9 +301,22 @@ export const useRewardsHistory = () => {
   const { evmHomeChainId: homeChainId } = selectedAgentConfig;
   const serviceConfigId = selectedService?.service_config_id;
   const { service } = useService(serviceConfigId);
+  const { selectedStakingProgramId } = useStakingProgram();
 
   const serviceNftTokenId =
     service?.chain_configs?.[asMiddlewareChain(homeChainId)]?.chain_data?.token;
+
+  const fallbackContracts = useMemo(() => {
+    if (!selectedStakingProgramId) return new Set<string>();
+    if (selectedStakingProgramId !== STAKING_PROGRAM_IDS.SupafundTest) {
+      return new Set<string>();
+    }
+
+    const address =
+      STAKING_PROGRAM_ADDRESS[homeChainId]?.[selectedStakingProgramId];
+    if (!address) return new Set<string>();
+    return new Set<string>([address.toLowerCase()]);
+  }, [homeChainId, selectedStakingProgramId]);
 
   const {
     isError,
@@ -251,7 +324,9 @@ export const useRewardsHistory = () => {
     isFetched,
     refetch,
     data: contractCheckpoints,
-  } = useContractCheckpoints(homeChainId, serviceNftTokenId);
+  } = useContractCheckpoints(homeChainId, serviceNftTokenId, {
+    treatMissingServiceIdsAsSelfFor: fallbackContracts,
+  });
 
   const epochSortedCheckpoints = useMemo<Checkpoint[]>(
     () =>

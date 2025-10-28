@@ -69,7 +69,7 @@ STAKING_ABI = {
                     {"name": "nonces", "type": "uint256[]"},
                     {"name": "tsStart", "type": "uint256"},
                     {"name": "reward", "type": "uint256"},
-                    {"name": "inactivity", "type": "uint256[]"},
+                    {"name": "inactivity", "type": "uint256"},
                 ],
             }
         ],
@@ -317,36 +317,13 @@ def connect_to_chain(rpc: str) -> Optional[Web3]:
     return None
 
 
-def get_service_info_from_contract(w3: Web3, staking_contract: str, service_id: int):
-    """Try to get service info including rewards using raw RPC calls."""
-    try:
-        # Try different method signatures for getting service info
-        methods = [
-            ('mapServiceInfo(uint256)', ['address', 'address', 'uint256[]', 'uint256', 'uint256[]']),
-            ('getServiceInfo(uint256)', ['address', 'address', 'uint256[]', 'uint256', 'uint256', 'uint256[]']),
-            ('serviceInfo(uint256)', ['address', 'address', 'uint256[]', 'uint256', 'uint256[]'])
-        ]
-
-        for method_sig, output_types in methods:
-            try:
-                method_id = w3.keccak(text=method_sig).hex()[:10]
-                data = method_id + hex(service_id)[2:].zfill(64)
-
-                result = w3.eth.call({
-                    'to': Web3.to_checksum_address(staking_contract),
-                    'data': data
-                })
-
-                # Try to decode - if successful, reward is typically at index 3
-                decoded = w3.codec.decode(output_types, result)
-                if len(decoded) > 3:
-                    return decoded[3], None  # Return reward
-            except:
-                continue
-
-        return None, "Could not decode service info from any method"
-    except Exception as e:
-        return None, str(e)
+def fetch_service_info(w3: Web3, staking_contract: str, service_id: int):
+    """Fetch service info tuple from the staking contract."""
+    contract = w3.eth.contract(
+        address=Web3.to_checksum_address(staking_contract),
+        abi=[STAKING_ABI["getServiceInfo"]],
+    )
+    return safe_contract_call(lambda: contract.functions.getServiceInfo(service_id).call())
 
 
 def main():
@@ -385,6 +362,18 @@ def main():
     # Create contract instances
     staking_contract_addr = Web3.to_checksum_address(staking_contract)
 
+    service_info_data, service_info_error = fetch_service_info(w3, staking_contract, service_id)
+    service_owner_onchain = None
+    service_reward = None
+    service_nonces_snapshot = None
+    if service_info_data and isinstance(service_info_data, (list, tuple)):
+        try:
+            service_owner_onchain = service_info_data[1]
+            service_nonces_snapshot = service_info_data[2]
+            service_reward = service_info_data[4]
+        except (IndexError, TypeError):
+            service_nonces_snapshot = None
+
     # === STAKING STATUS ===
     print_header("STAKING STATUS")
 
@@ -422,9 +411,8 @@ def main():
 
     # Get accrued rewards
     print()
-    rewards, error = get_service_info_from_contract(w3, staking_contract, service_id)
-    if rewards is not None:
-        print_item("Accrued rewards", wei_to_olas(rewards))
+    if service_reward is not None:
+        print_item("Accrued rewards", wei_to_olas(service_reward))
     else:
         print_item("Accrued rewards", f"{Color.YELLOW}Unable to retrieve{Color.END}")
 
@@ -435,19 +423,31 @@ def main():
     registry_contract = w3.eth.contract(address=staking_contract_addr, abi=[STAKING_ABI["serviceRegistryTokenUtility"]])
     registry_addr, error = safe_contract_call(lambda: registry_contract.functions.serviceRegistryTokenUtility().call())
 
-    if not error and registry_addr and agent_address:
+    if not error and registry_addr:
         # Get operator balance (security deposit)
         balance_contract = w3.eth.contract(
             address=registry_addr,
             abi=[SERVICE_REGISTRY_ABI["getOperatorBalance"]]
         )
-        security_deposit, _ = safe_contract_call(
-            lambda: balance_contract.functions.getOperatorBalance(
-                Web3.to_checksum_address(agent_address),
-                service_id
-            ).call(),
-            default=0
-        )
+
+        deposit_entries = []
+        candidate_addresses = [
+            ("Security deposit (owner)", service_owner_onchain),
+        ]
+        if agent_address and (not service_owner_onchain or agent_address.lower() != service_owner_onchain.lower()):
+            candidate_addresses.append(("Security deposit (agent)", agent_address))
+
+        for label, address in candidate_addresses:
+            if not address:
+                continue
+            deposit_value, _ = safe_contract_call(
+                lambda: balance_contract.functions.getOperatorBalance(
+                    Web3.to_checksum_address(address),
+                    service_id
+                ).call(),
+                default=0
+            )
+            deposit_entries.append((label, deposit_value))
 
         # Get agent bond
         bond_contract = w3.eth.contract(
@@ -463,16 +463,20 @@ def main():
         min_contract = w3.eth.contract(address=staking_contract_addr, abi=[STAKING_ABI["minStakingDeposit"]])
         min_deposit, _ = safe_contract_call(lambda: min_contract.functions.minStakingDeposit().call(), default=0)
 
-        # Display deposits
-        security_deposit_dec = Decimal(security_deposit)
-        agent_bond_dec = Decimal(agent_bond)
         min_deposit_dec = Decimal(min_deposit)
 
-        print_item(
-            "Security deposit",
-            wei_to_olas(security_deposit),
-            warning_message(security_deposit_dec, min_deposit_dec)
-        )
+        if deposit_entries:
+            for label, amount in deposit_entries:
+                print_item(
+                    label,
+                    wei_to_olas(amount),
+                    warning_message(Decimal(amount), min_deposit_dec)
+                )
+        else:
+            print_warning("Could not retrieve deposit balances")
+
+        agent_bond_dec = Decimal(agent_bond)
+
         print_item(
             "Agent bond",
             wei_to_olas(agent_bond),
@@ -523,21 +527,22 @@ def main():
                     current_nonce = nonces_list[0] if nonces_list else 0
 
                     # Retrieve nonce at last checkpoint from staking contract
-                    service_info_contract = w3.eth.contract(
-                        address=staking_contract_addr,
-                        abi=[STAKING_ABI["getServiceInfo"]]
-                    )
-                    service_info_result, _ = safe_contract_call(
-                        lambda: service_info_contract.functions.getServiceInfo(service_id).call()
-                    )
+                    service_info_result, _ = fetch_service_info(w3, staking_contract, service_id)
+
+                    nonces_at_checkpoint = None
+                    if service_info_result and isinstance(service_info_result, (list, tuple)):
+                        try:
+                            nonces_at_checkpoint = service_info_result[2]
+                        except (IndexError, TypeError):
+                            nonces_at_checkpoint = None
+                    elif isinstance(service_nonces_snapshot, (list, tuple)):
+                        nonces_at_checkpoint = service_nonces_snapshot
 
                     checkpoint_nonce = 0
-                    if service_info_result:
+                    if isinstance(nonces_at_checkpoint, (list, tuple)) and len(nonces_at_checkpoint) > 1:
                         try:
-                            nonces_at_checkpoint = service_info_result[0][2]
-                            if isinstance(nonces_at_checkpoint, (list, tuple)) and nonces_at_checkpoint:
-                                checkpoint_nonce = int(nonces_at_checkpoint[0])
-                        except (IndexError, TypeError, ValueError):
+                            checkpoint_nonce = int(nonces_at_checkpoint[1])
+                        except (TypeError, ValueError):
                             checkpoint_nonce = 0
 
                     txs_current_epoch = max(current_nonce - checkpoint_nonce, 0)
