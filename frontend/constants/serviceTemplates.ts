@@ -700,6 +700,7 @@ export const SUPAFUND_SERVICE_TEMPLATE: ServiceTemplate = {
     CREATOR_PER_SUBGRAPH: {
       name: 'Market creators per subgraph',
       description: 'JSON mapping of subgraph names to creator addresses',
+      value: '{"omen_subgraph":["0xf765a1FE2E15d0246430CCE854D2c923a85AF388"]}',
       provision_type: EnvProvisionType.FIXED,
     },
     PRIORITY_MECH_ADDRESS: {

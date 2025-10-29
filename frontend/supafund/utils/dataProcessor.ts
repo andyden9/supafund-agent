@@ -1,4 +1,74 @@
-import { TradeData, MarketData, UserPosition } from './subgraph';
+import { MarketData, TradeData, UserPosition } from './subgraph';
+
+const WEI_DECIMALS = 1e18;
+const MIN_TOKEN_BALANCE = 1e-6;
+
+const fromWei = (value?: string | null): number => {
+  if (!value) return 0;
+  const numeric = Number(value);
+  if (!Number.isFinite(numeric)) return 0;
+  return numeric / WEI_DECIMALS;
+};
+
+const round = (value: number, decimals = 2): number => {
+  if (!Number.isFinite(value)) return 0;
+  const factor = 10 ** decimals;
+  return Math.round(value * factor) / factor;
+};
+
+const clamp = (value: number, min: number, max: number): number =>
+  Math.min(Math.max(value, min), max);
+
+const nowInSeconds = (): number => Math.floor(Date.now() / 1000);
+
+const parseTimestamp = (value?: string | null): number | undefined => {
+  if (!value) return undefined;
+  const numeric = Number(value);
+  return Number.isFinite(numeric) ? numeric : undefined;
+};
+
+const formatDuration = (seconds: number): string => {
+  const absSeconds = Math.abs(seconds);
+  const days = Math.floor(absSeconds / 86400);
+  const hours = Math.floor((absSeconds % 86400) / 3600);
+  const minutes = Math.floor((absSeconds % 3600) / 60);
+
+  if (days > 0) {
+    return hours > 0 ? `${days}d ${hours}h` : `${days}d`;
+  }
+
+  if (hours > 0) {
+    return minutes > 0 ? `${hours}h ${minutes}m` : `${hours}h`;
+  }
+
+  if (minutes > 0) {
+    return `${minutes}m`;
+  }
+
+  return `${Math.max(1, Math.floor(absSeconds))}s`;
+};
+
+const formatTimeUntil = (timestamp?: number | null): string => {
+  if (!timestamp) return 'Unknown';
+  const diff = timestamp - nowInSeconds();
+  if (diff <= 0) return 'Expired';
+  return formatDuration(diff);
+};
+
+const formatTimeAgo = (timestamp: number): string => {
+  const diff = nowInSeconds() - timestamp;
+  if (diff < 60) return `${Math.max(1, diff)}s ago`;
+  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+  return `${Math.floor(diff / 86400)}d ago`;
+};
+
+const inferDirection = (outcomeName: string, outcomeIndex: number): 'YES' | 'NO' => {
+  const normalized = outcomeName.toLowerCase();
+  if (normalized.includes('no')) return 'NO';
+  if (normalized.includes('yes')) return 'YES';
+  return outcomeIndex === 0 ? 'YES' : 'NO';
+};
 
 export interface ProcessedMetrics {
   totalProfitLoss: number;
@@ -12,7 +82,7 @@ export interface ProcessedMetrics {
 export interface ProcessedOpportunity {
   id: string;
   title: string;
-  marketLeader: string; // e.g., "73% YES" or "51% NO"
+  marketLeader: string;
   category: string;
   expiresIn: string;
 }
@@ -42,41 +112,236 @@ export interface ProcessedActivity {
   };
 }
 
-// 计算交易盈亏
-const calculateTradePnL = (trade: TradeData): number => {
-  try {
-    const collateralAmount = parseFloat(trade.collateralAmount) / 1e18; // Wei to ETH
-    const feeAmount = parseFloat(trade.feeAmount) / 1e18;
-    // 由于 schema 不匹配，使用模拟价格计算
-    const outcomeTokenPrice = 0.45 + Math.random() * 0.1; // 0.45-0.55 之间的随机价格
-    
-    // 简化的盈亏计算 - 基于结果价格和投资金额
-    if (trade.type === 'Buy') {
-      // 买入时，如果价格上涨则盈利
-      return (outcomeTokenPrice - 0.5) * collateralAmount - feeAmount;
-    } else {
-      // 卖出时，如果价格下跌则盈利  
-      return (0.5 - outcomeTokenPrice) * collateralAmount - feeAmount;
-    }
-  } catch (error) {
-    console.error('Error calculating PnL for trade:', trade.id, error);
-    return 0;
+interface AggregatedPositionState {
+  key: string;
+  marketId: string;
+  marketTitle: string;
+  outcomeIndex: number;
+  outcomeName: string;
+  category: string;
+  conditionId?: string | null;
+  openingTimestamp?: number;
+  resolutionTimestamp?: number;
+  currentPrice: number;
+  netTokens: number;
+  costBasis: number;
+  realizedPnL: number;
+  realizedPnLWeekly: number;
+  realizedPnLMonthly: number;
+  winTrades: number;
+  closedTrades: number;
+  totalFees: number;
+  lastTradeTimestamp: number;
+}
+
+interface TradeSummary {
+  realizedPnL: number;
+  price: number;
+  tokens: number;
+  fee: number;
+  type: TradeData['type'];
+  outcomeName: string;
+  marketTitle: string;
+  marketId: string;
+  timestamp: number;
+}
+
+interface TradeAnalytics {
+  aggregations: Map<string, AggregatedPositionState>;
+  perTrade: Map<string, TradeSummary>;
+}
+
+const buildTradeAnalytics = (trades: TradeData[]): TradeAnalytics => {
+  const aggregations = new Map<string, AggregatedPositionState>();
+  const perTrade = new Map<string, TradeSummary>();
+
+  if (!trades || trades.length === 0) {
+    return { aggregations, perTrade };
   }
+
+  const sortedTrades = [...trades].sort(
+    (a, b) => Number(a.creationTimestamp) - Number(b.creationTimestamp)
+  );
+  const now = nowInSeconds();
+  const weekAgo = now - 7 * 24 * 60 * 60;
+  const monthAgo = now - 30 * 24 * 60 * 60;
+
+  sortedTrades.forEach(trade => {
+    const outcomeIndex = Number(trade.outcomeIndex ?? '0');
+    const key = `${trade.fpmm.id}-${outcomeIndex}`;
+    const tokens = fromWei(trade.outcomeTokensTraded);
+    const collateral = fromWei(trade.collateralAmount);
+    const fee = fromWei(trade.feeAmount);
+    const tradeTimestamp = Number(trade.creationTimestamp);
+
+    const outcomes = trade.fpmm.outcomes ?? [];
+    const fallbackOutcome =
+      outcomeIndex === 0 ? 'YES' : outcomeIndex === 1 ? 'NO' : `Outcome ${outcomeIndex}`;
+    const outcomeName = outcomes[outcomeIndex] ?? fallbackOutcome;
+
+    let aggregation = aggregations.get(key);
+    if (!aggregation) {
+      aggregation = {
+        key,
+        marketId: trade.fpmm.id,
+        marketTitle: trade.fpmm.title,
+        outcomeIndex,
+        outcomeName,
+        category:
+          trade.fpmm.category ??
+          trade.fpmm.question?.category ??
+          'General',
+        conditionId: trade.fpmm.condition?.id ?? null,
+        openingTimestamp: parseTimestamp(trade.fpmm.openingTimestamp),
+        resolutionTimestamp: parseTimestamp(trade.fpmm.resolutionTimestamp),
+        currentPrice: clamp(
+          Number.parseFloat(trade.fpmm.outcomeTokenMarginalPrices?.[outcomeIndex] ?? '0') || 0,
+          0,
+          1
+        ),
+        netTokens: 0,
+        costBasis: 0,
+        realizedPnL: 0,
+        realizedPnLWeekly: 0,
+        realizedPnLMonthly: 0,
+        winTrades: 0,
+        closedTrades: 0,
+        totalFees: 0,
+        lastTradeTimestamp: tradeTimestamp,
+      };
+      aggregations.set(key, aggregation);
+    }
+
+    const marginalPrice = Number.parseFloat(
+      trade.fpmm.outcomeTokenMarginalPrices?.[outcomeIndex] ?? ''
+    );
+    if (!Number.isNaN(marginalPrice)) {
+      aggregation.currentPrice = clamp(marginalPrice, 0, 1);
+    }
+
+    aggregation.lastTradeTimestamp = Math.max(aggregation.lastTradeTimestamp, tradeTimestamp);
+    aggregation.totalFees += fee;
+
+    let realizedPnLForTrade = 0;
+
+    if (tokens > 0) {
+      if (trade.type === 'Buy') {
+        const totalCost = collateral + fee;
+        aggregation.netTokens += tokens;
+        aggregation.costBasis += totalCost;
+      } else {
+        const netProceeds = Math.max(collateral - fee, 0);
+        const pricePerToken = tokens > 0 ? netProceeds / tokens : 0;
+
+        const netTokensBefore = aggregation.netTokens;
+        const costBasisBefore = aggregation.costBasis;
+
+        const tokensSold = Math.min(tokens, Math.max(netTokensBefore, 0));
+        if (tokensSold > 0 && netTokensBefore > 0) {
+          const avgCost = costBasisBefore / netTokensBefore;
+          const costPortion = avgCost * tokensSold;
+          const proceeds = pricePerToken * tokensSold;
+
+          realizedPnLForTrade += proceeds - costPortion;
+          aggregation.netTokens = netTokensBefore - tokensSold;
+          aggregation.costBasis = Math.max(costBasisBefore - costPortion, 0);
+        }
+
+        const remainingTokens = tokens - tokensSold;
+        if (remainingTokens > 0) {
+          const proceeds = pricePerToken * remainingTokens;
+          realizedPnLForTrade += proceeds;
+          aggregation.netTokens -= remainingTokens;
+          if (aggregation.netTokens <= MIN_TOKEN_BALANCE) {
+            aggregation.netTokens = 0;
+            aggregation.costBasis = 0;
+          }
+        }
+
+        aggregation.realizedPnL += realizedPnLForTrade;
+        aggregation.closedTrades += 1;
+        if (tradeTimestamp >= weekAgo) {
+          aggregation.realizedPnLWeekly += realizedPnLForTrade;
+        }
+        if (tradeTimestamp >= monthAgo) {
+          aggregation.realizedPnLMonthly += realizedPnLForTrade;
+        }
+        if (realizedPnLForTrade > 0) {
+          aggregation.winTrades += 1;
+        }
+      }
+    }
+
+    perTrade.set(trade.id, {
+      realizedPnL: realizedPnLForTrade,
+      price:
+        tokens > 0
+          ? trade.type === 'Buy'
+            ? (collateral + fee) / tokens
+            : Math.max(collateral - fee, 0) / tokens
+          : 0,
+      tokens,
+      fee,
+      type: trade.type,
+      outcomeName: aggregation.outcomeName,
+      marketTitle: aggregation.marketTitle,
+      marketId: aggregation.marketId,
+      timestamp: tradeTimestamp,
+    });
+  });
+
+  aggregations.forEach(aggregation => {
+    if (aggregation.netTokens !== 0 && Math.abs(aggregation.netTokens) <= MIN_TOKEN_BALANCE) {
+      aggregation.netTokens = 0;
+      aggregation.costBasis = 0;
+    }
+  });
+
+  return { aggregations, perTrade };
 };
 
-// 计算时间差
-const getTimeAgo = (timestamp: string): string => {
-  const now = Date.now();
-  const time = parseInt(timestamp) * 1000;
-  const diffSeconds = Math.floor((now - time) / 1000);
-  
-  if (diffSeconds < 60) return `${diffSeconds}s ago`;
-  if (diffSeconds < 3600) return `${Math.floor(diffSeconds / 60)}m ago`;
-  if (diffSeconds < 86400) return `${Math.floor(diffSeconds / 3600)}h ago`;
-  return `${Math.floor(diffSeconds / 86400)}d ago`;
+const calculateMarketLeader = (market: MarketData): string => {
+  const prices =
+    market.outcomeTokenMarginalPrices
+      ?.map(value => Number.parseFloat(value))
+      .filter(price => Number.isFinite(price)) ?? [];
+
+  if (prices.length === 0) return 'No liquidity';
+
+  const maxPrice = Math.max(...prices);
+  const leaderIndex = prices.indexOf(maxPrice);
+  const outcomes = market.outcomes ?? [];
+  const label =
+    outcomes[leaderIndex] ??
+    (leaderIndex === 0 ? 'YES' : leaderIndex === 1 ? 'NO' : `Outcome ${leaderIndex}`);
+
+  return `${(maxPrice * 100).toFixed(1)}% ${label}`;
 };
 
-// 计算指标
+const computeExpiryLabel = (market: MarketData): string => {
+  const now = nowInSeconds();
+  const resolutionTs = parseTimestamp(market.resolutionTimestamp);
+  if (resolutionTs && resolutionTs <= now) {
+    return 'Resolved';
+  }
+
+  const openingTs = parseTimestamp(market.openingTimestamp);
+  const target = openingTs ?? resolutionTs ?? parseTimestamp(market.creationTimestamp);
+  return formatTimeUntil(target);
+};
+
+const getOutcomeIndexFromIndexSet = (indexSet?: string): number | undefined => {
+  if (!indexSet) return undefined;
+  const numeric = Number(indexSet);
+  if (!Number.isFinite(numeric) || numeric <= 0) return undefined;
+  const logValue = Math.log2(numeric);
+  const rounded = Math.round(logValue);
+  if (Math.abs(logValue - rounded) > 1e-6) {
+    return undefined;
+  }
+  return rounded;
+};
+
 export const calculateMetricsFromTrades = (trades: TradeData[]): ProcessedMetrics => {
   if (!trades || trades.length === 0) {
     return {
@@ -89,211 +354,193 @@ export const calculateMetricsFromTrades = (trades: TradeData[]): ProcessedMetric
     };
   }
 
-  let totalPnL = 0;
-  let wins = 0;
-  let totalTrades = 0;
+  const { aggregations } = buildTradeAnalytics(trades);
+  const now = nowInSeconds();
+
+  let totalCostBasis = 0;
+  let totalCurrentValue = 0;
+  let realizedPnL = 0;
   let weeklyPnL = 0;
   let monthlyPnL = 0;
-  
-  const now = Date.now() / 1000;
-  const weekAgo = now - 7 * 24 * 60 * 60;
-  const monthAgo = now - 30 * 24 * 60 * 60;
+  let wins = 0;
+  let closedTrades = 0;
 
-  trades.forEach((trade) => {
-    const pnl = calculateTradePnL(trade);
-    const tradeTime = parseInt(trade.creationTimestamp);
-    
-    totalPnL += pnl;
-    totalTrades++;
-    
-    if (pnl > 0) wins++;
-    
-    if (tradeTime >= weekAgo) weeklyPnL += pnl;
-    if (tradeTime >= monthAgo) monthlyPnL += pnl;
+  aggregations.forEach(aggregation => {
+    realizedPnL += aggregation.realizedPnL;
+    weeklyPnL += aggregation.realizedPnLWeekly;
+    monthlyPnL += aggregation.realizedPnLMonthly;
+    wins += aggregation.winTrades;
+    closedTrades += aggregation.closedTrades;
+
+    if (aggregation.netTokens > MIN_TOKEN_BALANCE) {
+      totalCostBasis += aggregation.costBasis;
+      totalCurrentValue += aggregation.netTokens * aggregation.currentPrice;
+    }
   });
 
-  const winRate = totalTrades > 0 ? (wins / totalTrades) * 100 : 0;
-  
-  // 假设初始投资为总交易量的平均值
-  const avgTradeSize = trades.length > 0 
-    ? trades.reduce((sum, t) => sum + parseFloat(t.collateralAmount) / 1e18, 0) / trades.length 
-    : 1000;
-  const initialInvestment = avgTradeSize * 20; // 假设
+  const totalProfitLoss = realizedPnL + (totalCurrentValue - totalCostBasis);
+  const totalProfitLossPercentage =
+    totalCostBasis > 0 ? (totalProfitLoss / totalCostBasis) * 100 : 0;
+
+  const activePositions = Array.from(aggregations.values()).filter(
+    aggregation =>
+      aggregation.netTokens > MIN_TOKEN_BALANCE &&
+      (!aggregation.resolutionTimestamp || aggregation.resolutionTimestamp > now)
+  ).length;
+
+  const winRate = closedTrades > 0 ? (wins / closedTrades) * 100 : 0;
+  const base = totalCostBasis > 0 ? totalCostBasis : undefined;
+
+  const weeklyPerformance = base ? (weeklyPnL / base) * 100 : 0;
+  const monthlyPerformance = base ? (monthlyPnL / base) * 100 : 0;
 
   return {
-    totalProfitLoss: totalPnL,
-    totalProfitLossPercentage: initialInvestment > 0 ? (totalPnL / initialInvestment) * 100 : 0,
-    activePositions: trades.filter(t => !t.fpmm.resolutionTimestamp).length,
-    winRate,
-    weeklyPerformance: initialInvestment > 0 ? (weeklyPnL / initialInvestment) * 100 : 0,
-    monthlyPerformance: initialInvestment > 0 ? (monthlyPnL / initialInvestment) * 100 : 0,
+    totalProfitLoss: round(totalProfitLoss),
+    totalProfitLossPercentage: round(totalProfitLossPercentage),
+    activePositions,
+    winRate: round(winRate),
+    weeklyPerformance: round(weeklyPerformance),
+    monthlyPerformance: round(monthlyPerformance),
   };
 };
 
-// 计算市场主导方和占比
-const calculateMarketLeader = (market: MarketData): string => {
-  console.log('🎯 Calculating market leader for:', market.id);
-  console.log('📊 Outcomes:', market.outcomes);
-  console.log('💰 Marginal prices:', market.outcomeTokenMarginalPrices);
-  
-  // 使用边际价格数据计算占比
-  if (market.outcomeTokenMarginalPrices && market.outcomeTokenMarginalPrices.length >= 2 && market.outcomes) {
-    try {
-      // FPMM 的边际价格表示概率，已经是 0-1 之间的值
-      const marginalPrices = market.outcomeTokenMarginalPrices.map(price => {
-        const numPrice = parseFloat(price);
-        console.log('🔢 Raw price:', price, '→', numPrice);
-        return numPrice;
-      });
-      
-      if (marginalPrices.length >= 2 && marginalPrices.every(p => !isNaN(p))) {
-        // 找到价格最高的选项（最有可能的结果）
-        const maxPriceIndex = marginalPrices.indexOf(Math.max(...marginalPrices));
-        const maxPrice = marginalPrices[maxPriceIndex];
-        
-        // 边际价格直接就是概率，转换为百分比
-        const percentage = Math.round(maxPrice * 100);
-        
-        // 获取对应的结果标签
-        const outcome = market.outcomes[maxPriceIndex] || (maxPriceIndex === 0 ? 'YES' : 'NO');
-        
-        const result = `${percentage}% ${outcome.toUpperCase()}`;
-        console.log('✅ Calculated leader:', result);
-        return result;
-      }
-    } catch (error) {
-      console.warn('❌ Error parsing marginal prices:', error);
-    }
+export const processMarketOpportunities = (
+  markets: MarketData[]
+): ProcessedOpportunity[] => {
+  if (!markets || markets.length === 0) {
+    return [];
   }
-  
-  // 如果没有价格数据，显示可用选项
-  if (market.outcomes && market.outcomes.length >= 2) {
-    const result = market.outcomes.join(' vs ');
-    console.log('⚪ No price data, showing options:', result);
-    return result;
-  }
-  
-  console.log('❓ No data available');
-  return 'No Data';
+
+  return [...markets]
+    .sort((a, b) => Number(b.creationTimestamp) - Number(a.creationTimestamp))
+    .slice(0, 10)
+    .map(market => {
+      const truncatedTitle =
+        market.title.length > 80 ? `${market.title.substring(0, 77)}...` : market.title;
+
+      return {
+        id: market.id,
+        title: truncatedTitle,
+        marketLeader: calculateMarketLeader(market),
+        category: market.category ?? market.question?.category ?? 'General',
+        expiresIn: computeExpiryLabel(market),
+      };
+    });
 };
 
-// 处理市场机会
-export const processMarketOpportunities = (markets: MarketData[]): ProcessedOpportunity[] => {
-  console.log('🔄 Processing markets:', markets.length);
-  
-  return markets.slice(0, 10).map((market, index) => {
-    // 计算到期时间
-    const creationTime = parseInt(market.creationTimestamp);
-    const estimatedExpiry = creationTime + (30 * 24 * 60 * 60); // 假设30天后到期
-    const timeLeft = estimatedExpiry - Date.now() / 1000;
-    const daysLeft = Math.max(1, Math.floor(timeLeft / (24 * 60 * 60)));
-    
-    const processed = {
-      id: market.id,
-      title: market.title.length > 60 ? market.title.substring(0, 60) + '...' : market.title,
-      marketLeader: calculateMarketLeader(market),
-      category: market.question?.category || 'General',
-      expiresIn: daysLeft > 1 ? `${daysLeft} days` : 'Soon',
-    };
-    
-    console.log('📊 Final processed market:', { 
-      id: processed.id, 
-      title: processed.title.substring(0, 30) + '...', 
-      marketLeader: processed.marketLeader 
+export const processUserPositions = (
+  positions: UserPosition[],
+  trades: TradeData[]
+): ProcessedPosition[] => {
+  const { aggregations } = buildTradeAnalytics(trades);
+  if (aggregations.size === 0) {
+    return [];
+  }
+
+  const conditionBalances = new Map<string, number>();
+  positions?.forEach(position => {
+    const conditionId = position.position.conditionIds?.[0];
+    if (!conditionId) return;
+    const outcomeIndex = getOutcomeIndexFromIndexSet(position.position.indexSets?.[0]);
+    if (outcomeIndex === undefined) return;
+
+    const key = `${conditionId.toLowerCase()}-${outcomeIndex}`;
+    const balance = fromWei(position.balance);
+    if (balance <= 0) return;
+
+    const current = conditionBalances.get(key) ?? 0;
+    conditionBalances.set(key, current + balance);
+  });
+
+  const now = nowInSeconds();
+  const processed: ProcessedPosition[] = [];
+
+  aggregations.forEach(aggregation => {
+    const conditionKey = aggregation.conditionId
+      ? `${aggregation.conditionId.toLowerCase()}-${aggregation.outcomeIndex}`
+      : undefined;
+    const positionBalance = conditionKey ? conditionBalances.get(conditionKey) : undefined;
+    const tokensHeld =
+      positionBalance !== undefined ? positionBalance : aggregation.netTokens;
+
+    if (tokensHeld <= MIN_TOKEN_BALANCE) {
+      return;
+    }
+
+    const costBasisForHeldTokens =
+      aggregation.netTokens > MIN_TOKEN_BALANCE && tokensHeld > 0
+        ? aggregation.costBasis * (tokensHeld / aggregation.netTokens)
+        : aggregation.costBasis;
+
+    const entryPrice = tokensHeld > 0 ? costBasisForHeldTokens / tokensHeld : 0;
+    const currentPrice = aggregation.currentPrice ?? entryPrice;
+    const unrealizedPnL = tokensHeld * (currentPrice - entryPrice);
+    const totalPnL = aggregation.realizedPnL + unrealizedPnL;
+    const pnlPercentage =
+      costBasisForHeldTokens > 0 ? (totalPnL / costBasisForHeldTokens) * 100 : 0;
+    const isResolved =
+      aggregation.resolutionTimestamp !== undefined &&
+      aggregation.resolutionTimestamp <= now;
+    const status: ProcessedPosition['status'] = isResolved ? 'CLOSED' : 'OPEN';
+    const expiryTimestamp = isResolved
+      ? aggregation.resolutionTimestamp
+      : aggregation.openingTimestamp ?? aggregation.resolutionTimestamp;
+    const timeRemaining = isResolved ? 'Resolved' : formatTimeUntil(expiryTimestamp);
+
+    processed.push({
+      id: aggregation.key,
+      market: aggregation.marketTitle,
+      direction: inferDirection(aggregation.outcomeName, aggregation.outcomeIndex),
+      entryPrice: round(entryPrice),
+      currentPrice: round(currentPrice),
+      size: round(tokensHeld, 4),
+      pnl: round(totalPnL),
+      pnlPercentage: round(pnlPercentage),
+      timeRemaining,
+      status,
     });
-    return processed;
+  });
+
+  return processed.sort((a, b) => {
+    if (a.status === b.status) {
+      return b.pnl - a.pnl;
+    }
+    return a.status === 'OPEN' ? -1 : 1;
   });
 };
 
-// 寻找对应的交易来获取市场标题
-const findMarketTitleFromTrades = (position: UserPosition, trades: TradeData[]): string => {
-  console.log('🔍 Looking for market title for position:', position.id);
-  console.log('📋 Condition IDs:', position.position.conditionIds);
-  
-  if (trades.length === 0) {
-    console.log('⚠️ No trades available for matching');
-    return `Market Position ${position.position.conditionIds[0]?.substring(0, 8) || 'Unknown'}`;
-  }
-  
-  // 优先策略：查找最近的交易作为代表
-  if (trades.length > 0) {
-    // 使用最近的交易标题，因为用户的仓位很可能与最近的交易相关
-    const recentTrade = trades[0]; // trades 已经按时间排序
-    if (recentTrade && recentTrade.fpmm.title) {
-      const title = recentTrade.fpmm.title;
-      const cleanTitle = title.length > 60 ? title.substring(0, 60) + '...' : title;
-      console.log('✅ Using recent trade title:', cleanTitle);
-      return cleanTitle;
-    }
-  }
-  
-  // 回退策略：如果有交易但没有标题，使用交易的 title 字段
-  const tradeWithTitle = trades.find(trade => trade.title && trade.title.trim() !== '');
-  if (tradeWithTitle) {
-    const title = tradeWithTitle.title;
-    const cleanTitle = title.length > 60 ? title.substring(0, 60) + '...' : title;
-    console.log('✅ Using trade title field:', cleanTitle);
-    return cleanTitle;
-  }
-  
-  // 最后回退：使用通用标题
-  console.log('❌ No matching title found, using fallback');
-  return `Market Position ${position.position.conditionIds[0]?.substring(0, 8) || 'Unknown'}`;
-};
-
-// 处理当前仓位
-export const processUserPositions = (positions: UserPosition[], trades: TradeData[]): ProcessedPosition[] => {
-  console.log('🔄 Processing positions:', positions.length, 'with trades:', trades.length);
-  
-  return positions.map((position, index) => {
-    const balance = parseFloat(position.balance) / 1e18;
-    const entryPrice = 0.4 + Math.random() * 0.2; // 模拟进入价格 (0.4-0.6)
-    const currentPrice = 0.4 + Math.random() * 0.2; // 模拟当前价格
-    
-    const pnl = (currentPrice - entryPrice) * balance;
-    const pnlPercentage = entryPrice > 0 ? (pnl / (entryPrice * balance)) * 100 : 0;
-    
-    // 获取清晰的市场标题
-    const marketTitle = findMarketTitleFromTrades(position, trades);
-    
-    const processed = {
-      id: position.id,
-      market: marketTitle,
-      direction: Math.random() > 0.5 ? 'YES' : 'NO',
-      entryPrice: Math.round(entryPrice * 100) / 100,
-      currentPrice: Math.round(currentPrice * 100) / 100,
-      size: Math.round(balance * 100) / 100,
-      pnl: Math.round(pnl * 100) / 100,
-      pnlPercentage: Math.round(pnlPercentage * 100) / 100,
-      timeRemaining: `${Math.floor(Math.random() * 30) + 1} days`,
-      status: 'OPEN' as const,
-    };
-    
-    console.log('📊 Processed position:', { 
-      id: processed.id, 
-      market: processed.market,
-      conditionId: position.position.conditionIds[0]?.substring(0, 8)
-    });
-    
-    return processed;
-  });
-};
-
-// 处理活动历史
 export const processTradeActivities = (trades: TradeData[]): ProcessedActivity[] => {
-  return trades.slice(0, 20).map((trade) => {
-    const pnl = calculateTradePnL(trade);
-    const isPositionClosed = trade.fpmm.resolutionTimestamp;
-    
-    return {
-      id: trade.id,
-      type: isPositionClosed ? 'POSITION_CLOSED' : 'POSITION_OPENED',
-      title: isPositionClosed ? 'Closed position' : 'Opened position',
-      description: `${trade.type} ${trade.title.substring(0, 50)}${trade.title.length > 50 ? '...' : ''}`,
-      timestamp: getTimeAgo(trade.creationTimestamp),
-      result: {
-        pnl: isPositionClosed ? Math.round(pnl * 100) / 100 : undefined,
-      },
-    };
-  });
+  if (!trades || trades.length === 0) {
+    return [];
+  }
+
+  const { perTrade } = buildTradeAnalytics(trades);
+
+  return [...trades]
+    .sort((a, b) => Number(b.creationTimestamp) - Number(a.creationTimestamp))
+    .slice(0, 20)
+    .map(trade => {
+      const summary = perTrade.get(trade.id);
+      const tokens = summary?.tokens ?? fromWei(trade.outcomeTokensTraded);
+      const price = summary?.price ?? 0;
+      const outcomeName =
+        summary?.outcomeName ??
+        trade.fpmm.outcomes?.[Number(trade.outcomeIndex)] ??
+        `Outcome ${trade.outcomeIndex}`;
+      const action = trade.type === 'Buy' ? 'Bought' : 'Sold';
+      const pnlValue = summary?.realizedPnL ?? 0;
+      const hasRealizedPnl = Math.abs(pnlValue) > 0.0001;
+
+      const amountLabel =
+        tokens > 0 ? `${round(tokens, 2)} @ ${round(price, 2)}` : 'No size recorded';
+
+      return {
+        id: trade.id,
+        type: trade.type === 'Buy' ? 'POSITION_OPENED' : 'POSITION_CLOSED',
+        title: `${action} ${outcomeName}`,
+        description: `${trade.fpmm.title} • ${amountLabel}`,
+        timestamp: formatTimeAgo(Number(trade.creationTimestamp)),
+        result: hasRealizedPnl ? { pnl: round(pnlValue) } : undefined,
+      };
+    });
 };

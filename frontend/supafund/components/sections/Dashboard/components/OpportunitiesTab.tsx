@@ -1,11 +1,4 @@
-import { InfoCircleOutlined } from '@ant-design/icons';
-import {
-  Button,
-  Card,
-  Empty,
-  Tag,
-  Typography,
-} from 'antd';
+import { Card, Empty, Tag, Typography } from 'antd';
 import React from 'react';
 
 const { Title, Text } = Typography;
@@ -64,11 +57,15 @@ export const OpportunitiesTab: React.FC<OpportunitiesTabProps> = ({
               >
                 {opportunity.title}
               </Title>
-              <Tag 
+              <Tag
                 color={
-                  opportunity.marketLeader.includes('%') ? (
-                    opportunity.marketLeader.includes('YES') ? 'green' : 'red'
-                  ) : 'blue'
+                  opportunity.marketLeader.includes('%')
+                    ? opportunity.marketLeader.toLowerCase().includes('yes')
+                      ? 'green'
+                      : opportunity.marketLeader.toLowerCase().includes('no')
+                        ? 'red'
+                        : 'blue'
+                    : 'blue'
                 }
                 style={{ 
                   margin: 0, 
@@ -82,35 +79,25 @@ export const OpportunitiesTab: React.FC<OpportunitiesTabProps> = ({
               </Tag>
             </div>
             
-            {/* Footer with category, expiry and action */}
+            {/* Footer with category and expiry */}
             <div style={{ 
-              display: 'flex', 
-              justifyContent: 'space-between', 
+              display: 'flex',
+              flexWrap: 'wrap',
+              gap: '16px',
               alignItems: 'center',
               paddingTop: '8px',
               borderTop: '1px solid #f5f5f5'
             }}>
-              <div style={{ display: 'flex', gap: '16px', alignItems: 'center' }}>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  {opportunity.category}
-                </Text>
-                <Text type="secondary" style={{ fontSize: '12px' }}>
-                  Expires in {opportunity.expiresIn}
-                </Text>
-              </div>
-              <Button 
-                type="link" 
-                icon={<InfoCircleOutlined />} 
-                size="small" 
-                style={{ 
-                  padding: '4px 8px', 
-                  fontSize: '12px',
-                  height: 'auto',
-                  color: '#666'
-                }}
-              >
-                View
-              </Button>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {opportunity.category}
+              </Text>
+              <Text type="secondary" style={{ fontSize: '12px' }}>
+                {opportunity.expiresIn === 'Resolved'
+                  ? 'Resolved'
+                  : opportunity.expiresIn === 'Expired'
+                    ? 'Expired'
+                    : `Expires in ${opportunity.expiresIn}`}
+              </Text>
             </div>
           </div>
         </Card>

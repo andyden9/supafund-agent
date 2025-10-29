@@ -14,6 +14,7 @@ export interface TradeData {
   collateralToken: string;
   collateralAmount: string;
   feeAmount: string;
+  outcomeTokensTraded: string;
   outcomeIndex: string;
   // outcomeTokenAmounts removed due to schema mismatch
   type: string;
@@ -23,8 +24,19 @@ export interface TradeData {
     id: string;
     title: string;
     outcomes: string[];
+    outcomeTokenMarginalPrices?: string[];
+    openingTimestamp?: string;
+    category?: string;
     resolutionTimestamp?: string;
     currentAnswer?: string;
+    condition?: {
+      id: string;
+    };
+    question?: {
+      id: string;
+      title: string;
+      category?: string;
+    } | null;
   };
 }
 
@@ -36,13 +48,15 @@ export interface MarketData {
   collateralToken: string;
   fee: string;
   creationTimestamp: string;
+  category?: string;
+  openingTimestamp?: string;
   resolutionTimestamp?: string;
   currentAnswer?: string;
-  question: {
+  question?: {
     id: string;
     title: string;
     category?: string;
-  };
+  } | null;
 }
 
 export interface UserPosition {
@@ -52,6 +66,7 @@ export interface UserPosition {
   position: {
     id: string;
     conditionIds: string[];
+    indexSets: string[];
   };
 }
 
@@ -78,6 +93,7 @@ export const queryUserTrades = async (userAddress: string): Promise<TradeData[]>
         collateralToken
         collateralAmount
         feeAmount
+        outcomeTokensTraded
         outcomeIndex
         type
         creationTimestamp
@@ -86,8 +102,19 @@ export const queryUserTrades = async (userAddress: string): Promise<TradeData[]>
           id
           title
           outcomes
+          outcomeTokenMarginalPrices
+          openingTimestamp
+          category
           resolutionTimestamp
           currentAnswer
+          condition {
+            id
+          }
+          question {
+            id
+            title
+            category
+          }
         }
       }
     }
@@ -130,6 +157,8 @@ export const queryMarketOpportunities = async (): Promise<MarketData[]> => {
         collateralToken
         fee
         creationTimestamp
+        category
+        openingTimestamp
         resolutionTimestamp
         currentAnswer
         question {
@@ -173,6 +202,7 @@ export const queryUserPositions = async (userAddress: string): Promise<UserPosit
           position {
             id
             conditionIds
+            indexSets
           }
         }
       }
