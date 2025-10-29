@@ -120,7 +120,7 @@ type: skill
         staking_contract_address: ${STAKING_CONTRACT_ADDRESS:str:0x2Ef503950Be67a98746F484DA0bBAdA339DF3326}
         staking_interaction_sleep_time: ${STAKING_INTERACTION_SLEEP_TIME:int:5}
         disable_trading: ${DISABLE_TRADING:bool:false}
-        stop_trading_if_staking_kpi_met: ${STOP_TRADING_IF_STAKING_KPI_MET:bool:true}
+        stop_trading_if_staking_kpi_met: ${STOP_TRADING_IF_STAKING_KPI_MET:bool:false}
         enable_position_review: ${ENABLE_POSITION_REVIEW:bool:false}
         review_period_seconds: ${REVIEW_PERIOD_SECONDS:int:86400}
         agent_balance_threshold: ${AGENT_BALANCE_THRESHOLD:int:10000000000000000}
@@ -384,7 +384,7 @@ type: skill
         staking_contract_address: ${STAKING_CONTRACT_ADDRESS:str:0x2Ef503950Be67a98746F484DA0bBAdA339DF3326}
         staking_interaction_sleep_time: ${STAKING_INTERACTION_SLEEP_TIME:int:5}
         disable_trading: ${DISABLE_TRADING:bool:false}
-        stop_trading_if_staking_kpi_met: ${STOP_TRADING_IF_STAKING_KPI_MET:bool:true}
+        stop_trading_if_staking_kpi_met: ${STOP_TRADING_IF_STAKING_KPI_MET:bool:false}
         agent_balance_threshold: ${AGENT_BALANCE_THRESHOLD:int:10000000000000000}
         refill_check_interval: ${REFILL_CHECK_INTERVAL:int:10}
         tool_punishment_multiplier: ${TOOL_PUNISHMENT_MULTIPLIER:int:1}
@@ -508,7 +508,7 @@ type: skill
         staking_contract_address: ${STAKING_CONTRACT_ADDRESS:str:0x2Ef503950Be67a98746F484DA0bBAdA339DF3326}
         staking_interaction_sleep_time: ${STAKING_INTERACTION_SLEEP_TIME:int:5}
         disable_trading: ${DISABLE_TRADING:bool:false}
-        stop_trading_if_staking_kpi_met: ${STOP_TRADING_IF_STAKING_KPI_MET:bool:true}
+        stop_trading_if_staking_kpi_met: ${STOP_TRADING_IF_STAKING_KPI_MET:bool:false}
         agent_balance_threshold: ${AGENT_BALANCE_THRESHOLD:int:10000000000000000}
         refill_check_interval: ${REFILL_CHECK_INTERVAL:int:10}
         tool_punishment_multiplier: ${TOOL_PUNISHMENT_MULTIPLIER:int:1}
@@ -632,7 +632,7 @@ type: skill
         staking_contract_address: ${STAKING_CONTRACT_ADDRESS:str:0x2Ef503950Be67a98746F484DA0bBAdA339DF3326}
         staking_interaction_sleep_time: ${STAKING_INTERACTION_SLEEP_TIME:int:5}
         disable_trading: ${DISABLE_TRADING:bool:false}
-        stop_trading_if_staking_kpi_met: ${STOP_TRADING_IF_STAKING_KPI_MET:bool:true}
+        stop_trading_if_staking_kpi_met: ${STOP_TRADING_IF_STAKING_KPI_MET:bool:false}
         agent_balance_threshold: ${AGENT_BALANCE_THRESHOLD:int:10000000000000000}
         refill_check_interval: ${REFILL_CHECK_INTERVAL:int:10}
         tool_punishment_multiplier: ${TOOL_PUNISHMENT_MULTIPLIER:int:1}

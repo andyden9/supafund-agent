@@ -306,17 +306,36 @@ export const useRewardsHistory = () => {
   const serviceNftTokenId =
     service?.chain_configs?.[asMiddlewareChain(homeChainId)]?.chain_data?.token;
 
-  const fallbackContracts = useMemo(() => {
-    if (!selectedStakingProgramId) return new Set<string>();
-    if (selectedStakingProgramId !== STAKING_PROGRAM_IDS.SupafundTest) {
-      return new Set<string>();
-    }
+  const serviceStakingProgramIds = useMemo(() => {
+    if (!service?.chain_configs) return new Set<StakingProgramId>();
 
-    const address =
-      STAKING_PROGRAM_ADDRESS[homeChainId]?.[selectedStakingProgramId];
-    if (!address) return new Set<string>();
-    return new Set<string>([address.toLowerCase()]);
-  }, [homeChainId, selectedStakingProgramId]);
+    const ids = Object.values(service.chain_configs)
+      .map((chainConfig) =>
+        chainConfig?.chain_data?.user_params?.staking_program_id
+          ? (chainConfig.chain_data.user_params
+              .staking_program_id as StakingProgramId)
+          : undefined,
+      )
+      .filter((id): id is StakingProgramId => Boolean(id));
+
+    return new Set<StakingProgramId>(ids);
+  }, [service?.chain_configs]);
+
+  const fallbackContracts = useMemo(() => {
+    const addresses = new Set<string>();
+
+    const addAddressForProgram = (programId?: StakingProgramId) => {
+      if (!programId) return;
+      const address = STAKING_PROGRAM_ADDRESS[homeChainId]?.[programId];
+      if (!address) return;
+      addresses.add(address.toLowerCase());
+    };
+
+    addAddressForProgram(selectedStakingProgramId);
+    serviceStakingProgramIds.forEach(addAddressForProgram);
+
+    return addresses;
+  }, [homeChainId, selectedStakingProgramId, serviceStakingProgramIds]);
 
   const {
     isError,

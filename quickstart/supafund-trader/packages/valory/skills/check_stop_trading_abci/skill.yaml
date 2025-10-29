@@ -133,7 +133,7 @@ models:
       light_slash_unit_amount: 5000000000000000
       serious_slash_unit_amount: 8000000000000000
       disable_trading: false
-      stop_trading_if_staking_kpi_met: true
+      stop_trading_if_staking_kpi_met: false
       enable_position_review: false
       review_period_seconds: 86400
     class_name: CheckStopTradingParams

@@ -114,7 +114,7 @@
     "CREATOR_PER_SUBGRAPH": {
       "name": "Creator per subgraph",
       "description": "",
-      "value": "{\"omen_subgraph\":[\"0xAFD5806E1fc7f706236e2F294ab1745A26bDB720\"]}",
+      "value": "{\"omen_subgraph\":[\"0xf765a1FE2E15d0246430CCE854D2c923a85AF388\"]}",
       "provision_type": "fixed"
     },
     "SUBGRAPH_API_KEY": {
@@ -168,7 +168,7 @@
     "SUPAFUND_MARKET_CREATORS": {
       "name": "Supafund market creator addresses",
       "description": "List of addresses that create Supafund prediction markets",
-      "value": "[\"0xAFD5806E1fc7f706236e2F294ab1745A26bDB720\"]",
+      "value": "[\"0xf765a1FE2E15d0246430CCE854D2c923a85AF388\"]",
       "provision_type": "fixed"
     },
     "MIN_EDGE_THRESHOLD": {
@@ -187,6 +187,12 @@
       "name": "Opening margin",
       "description": "Time buffer (in seconds) before market opens to start analyzing. Set to 3600 (1 hour) for short-term markets.",
       "value": "3600",
+      "provision_type": "fixed"
+    },
+    "STOP_TRADING_IF_STAKING_KPI_MET": {
+      "name": "Stop trading if staking KPI met",
+      "description": "Disable automatic stop once KPI is reached",
+      "value": "false",
       "provision_type": "fixed"
     },
     "LANGUAGES": {

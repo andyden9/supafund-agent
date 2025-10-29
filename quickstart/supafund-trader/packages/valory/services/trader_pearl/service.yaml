@@ -119,7 +119,7 @@ models:
       staking_contract_address: ${STAKING_CONTRACT_ADDRESS:str:0x0000000000000000000000000000000000000000}
       staking_interaction_sleep_time: ${STAKING_INTERACTION_SLEEP_TIME:int:5}
       disable_trading: ${DISABLE_TRADING:bool:false}
-      stop_trading_if_staking_kpi_met: ${STOP_TRADING_IF_STAKING_KPI_MET:bool:true}
+      stop_trading_if_staking_kpi_met: ${STOP_TRADING_IF_STAKING_KPI_MET:bool:false}
       enable_position_review: ${ENABLE_POSITION_REVIEW:bool:false}
       review_period_seconds: ${REVIEW_PERIOD_SECONDS:int:86400}
       agent_balance_threshold: ${AGENT_BALANCE_THRESHOLD:int:10000000000000000}

@@ -15,7 +15,7 @@
 #
 # Requirements:
 #   - Poetry installed
-#   - olas-operate-middleware properly set up in olas3 directory
+#   - olas-operate-middleware properly set up in directory
 #
 # ==============================================================================
 

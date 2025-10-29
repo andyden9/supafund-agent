@@ -240,7 +240,7 @@ models:
       staking_contract_address: ${str:0x2Ef503950Be67a98746F484DA0bBAdA339DF3326}
       staking_interaction_sleep_time: ${int:5}
       disable_trading: ${bool:false}
-      stop_trading_if_staking_kpi_met: ${bool:true}
+      stop_trading_if_staking_kpi_met: ${bool:false}
       agent_balance_threshold: ${int:10000000000000000}
       refill_check_interval: ${int:10}
       tool_punishment_multiplier: ${int:1}
