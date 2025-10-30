@@ -14,11 +14,44 @@ interface Position {
   pnlPercentage: number;
   timeRemaining: string;
   status: 'OPEN' | 'CLOSED' | 'PENDING';
+  entryValue: number;
+  currentValue: number;
+  collateralSymbol: string;
+  collateralIsStable: boolean;
+  marketAddress: string;
 }
 
 interface PositionsTabProps {
   positions: Position[];
 }
+
+const formatProbability = (value: number): string => {
+  if (!Number.isFinite(value)) return '–';
+  return `${(value * 100).toFixed(1)}%`;
+};
+
+const formatTokenSize = (value: number): string => {
+  if (!Number.isFinite(value)) return '0';
+  if (Math.abs(value) >= 1) {
+    return value.toFixed(2);
+  }
+  return value.toFixed(4);
+};
+
+const formatSigned = (value: number, formatted: string): string =>
+  value > 0 ? `+${formatted}` : formatted;
+
+const formatValue = (
+  value: number,
+  isStable: boolean,
+  symbol: string,
+): string => {
+  const formatted = value.toFixed(2);
+  if (isStable) {
+    return `$${formatted}`;
+  }
+  return `${formatted} ${symbol}`;
+};
 
 export const PositionsTab: React.FC<PositionsTabProps> = ({ positions }) => {
   if (positions.length === 0) {
@@ -31,7 +64,24 @@ export const PositionsTab: React.FC<PositionsTabProps> = ({ positions }) => {
     <div style={{ display: 'flex', flexDirection: 'column', gap: '12px' }}>
       {positions.map((position) => {
         const pnlColor = position.pnl >= 0 ? '#3f8600' : '#cf1322';
-        const pnlPrefix = position.pnl >= 0 ? '+' : '';
+        const entryProbability = formatProbability(position.entryPrice);
+        const currentProbability = formatProbability(position.currentPrice);
+        const tokenSize = formatTokenSize(position.size);
+        const pnlValue = formatSigned(position.pnl, position.pnl.toFixed(2));
+        const pnlPercentage = `${formatSigned(
+          position.pnlPercentage,
+          position.pnlPercentage.toFixed(1),
+        )}%`;
+        const currentValue = formatValue(
+          position.currentValue,
+          position.collateralIsStable,
+          position.collateralSymbol,
+        );
+        const entryValue = formatValue(
+          position.entryValue,
+          position.collateralIsStable,
+          position.collateralSymbol,
+        );
         
         return (
           <Card 
@@ -83,16 +133,25 @@ export const PositionsTab: React.FC<PositionsTabProps> = ({ positions }) => {
               }}>
                 <div style={{ textAlign: 'center' }}>
                   <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>Entry Price</Text>
-                  <Text style={{ fontSize: '14px', fontWeight: 500 }}>${position.entryPrice.toFixed(2)}</Text>
+                  <Text style={{ fontSize: '14px', fontWeight: 500 }}>{entryProbability}</Text>
                 </div>
                 <div style={{ textAlign: 'center' }}>
                   <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>Current Price</Text>
-                  <Text style={{ fontSize: '14px', fontWeight: 500 }}>${position.currentPrice.toFixed(2)}</Text>
+                  <Text style={{ fontSize: '14px', fontWeight: 500 }}>{currentProbability}</Text>
                 </div>
                 <div style={{ textAlign: 'center' }}>
-                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>Position Size</Text>
-                  <Text style={{ fontSize: '14px', fontWeight: 500 }}>${position.size.toFixed(2)}</Text>
+                  <Text type="secondary" style={{ fontSize: '12px', display: 'block', marginBottom: '4px' }}>Tokens Held</Text>
+                  <Text style={{ fontSize: '14px', fontWeight: 500 }}>{tokenSize}</Text>
                 </div>
+              </div>
+              
+              <div style={{ display: 'flex', justifyContent: 'space-between', alignItems: 'center' }}>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  Current Value: <span style={{ fontWeight: 500, color: '#141414' }}>{currentValue}</span>
+                </Text>
+                <Text type="secondary" style={{ fontSize: '12px' }}>
+                  Cost Basis: <span style={{ fontWeight: 500, color: '#141414' }}>{entryValue}</span>
+                </Text>
               </div>
               
               {/* P&L and time remaining */}
@@ -103,22 +162,25 @@ export const PositionsTab: React.FC<PositionsTabProps> = ({ positions }) => {
                     fontSize: '15px', 
                     fontWeight: 'bold' 
                   }}>
-                    {pnlPrefix}${position.pnl.toFixed(2)} ({pnlPrefix}{position.pnlPercentage.toFixed(1)}%)
+                    P&amp;L: {pnlValue} ({pnlPercentage})
                   </Text>
                 </div>
                 <div style={{ display: 'flex', alignItems: 'center', gap: '12px' }}>
                   <Text type="secondary" style={{ fontSize: '12px' }}>
                     {position.timeRemaining}
                   </Text>
-                  <Button 
-                    type="link" 
-                    size="small" 
-                    style={{ 
-                      padding: '4px 8px', 
+                  <Button
+                    type="link"
+                    size="small"
+                    style={{
+                      padding: '4px 8px',
                       fontSize: '12px',
                       height: 'auto',
                       color: '#666'
                     }}
+                    href={`https://dreamathon.supafund.xyz/markets/${position.marketAddress}`}
+                    target="_blank"
+                    rel="noopener noreferrer"
                   >
                     View
                   </Button>

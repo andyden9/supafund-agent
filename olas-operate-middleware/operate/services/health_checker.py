@@ -39,7 +39,7 @@ class HealthChecker:
     SLEEP_PERIOD_DEFAULT = 30
     PORT_UP_TIMEOUT_DEFAULT = 300  # seconds
     REQUEST_TIMEOUT_DEFAULT = 90
-    NUMBER_OF_FAILS_DEFAULT = 10
+    NUMBER_OF_FAILS_DEFAULT = 300
 
     def __init__(
         self,

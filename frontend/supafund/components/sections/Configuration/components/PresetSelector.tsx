@@ -1,4 +1,4 @@
-import { Button, Card, Col, Row, Typography } from 'antd';
+import { Button, Card, Row, Typography } from 'antd';
 import React from 'react';
 
 const { Text } = Typography;
@@ -81,37 +81,46 @@ export const PresetSelector: React.FC<PresetSelectorProps> = ({
           Reset to Default
         </Button>
       </Row>
-      <Row gutter={[8, 8]}>
+      <div
+        style={{
+          display: 'grid',
+          gridTemplateColumns: 'repeat(auto-fill, minmax(180px, 1fr))',
+          gap: '12px',
+        }}
+      >
         {Object.entries(presetConfigurations).map(([key, preset]) => (
-          <Col xs={12} sm={6} key={key}>
-            <Card
-              hoverable
-              size="small"
-              onClick={() => onSelect(preset.weights)}
-              style={{
-                cursor: 'pointer',
-                borderColor:
-                  JSON.stringify(currentWeights) ===
-                  JSON.stringify(preset.weights)
-                    ? '#1890ff'
-                    : undefined,
-                backgroundColor:
-                  JSON.stringify(currentWeights) ===
-                  JSON.stringify(preset.weights)
-                    ? '#e6f7ff'
-                    : undefined,
-              }}
-            >
-              <Text strong style={{ fontSize: '14px', display: 'block' }}>
-                {preset.name}
-              </Text>
-              <Text type="secondary" style={{ fontSize: '12px' }}>
-                {preset.description}
-              </Text>
-            </Card>
-          </Col>
+          <Card
+            key={key}
+            hoverable
+            size="small"
+            onClick={() => onSelect(preset.weights)}
+            style={{
+              cursor: 'pointer',
+              borderColor:
+                JSON.stringify(currentWeights) ===
+                JSON.stringify(preset.weights)
+                  ? '#1890ff'
+                  : undefined,
+              backgroundColor:
+                JSON.stringify(currentWeights) ===
+                JSON.stringify(preset.weights)
+                  ? '#e6f7ff'
+                  : undefined,
+              minHeight: '120px',
+              display: 'flex',
+              flexDirection: 'column',
+              justifyContent: 'center',
+            }}
+          >
+            <Text strong style={{ fontSize: '14px', marginBottom: '4px' }}>
+              {preset.name}
+            </Text>
+            <Text type="secondary" style={{ fontSize: '12px', whiteSpace: 'normal' }}>
+              {preset.description}
+            </Text>
+          </Card>
         ))}
-      </Row>
+      </div>
     </div>
   );
 };

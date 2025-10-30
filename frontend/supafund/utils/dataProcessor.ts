@@ -3,6 +3,54 @@ import { MarketData, TradeData, UserPosition } from './subgraph';
 const WEI_DECIMALS = 1e18;
 const MIN_TOKEN_BALANCE = 1e-6;
 
+const sanitizeWhitespace = (value: string): string =>
+  value
+    .replace(/\s+/g, ' ')
+    .replace(/\u00a0/g, ' ')
+    .trim();
+
+const sanitizeMarketTitle = (title?: string | null): string => {
+  if (!title) return 'Untitled market';
+  const [headline] = title.split('<contextStart>');
+  const cleaned = sanitizeWhitespace(headline);
+  return cleaned.length > 0 ? cleaned : 'Untitled market';
+};
+
+const sanitizeOutcomeLabel = (label: string, fallbackIndex: number): string => {
+  const cleaned = sanitizeWhitespace(label);
+  if (cleaned.length === 0) {
+    return fallbackIndex === 0 ? 'YES' : fallbackIndex === 1 ? 'NO' : `Outcome ${fallbackIndex}`;
+  }
+  return cleaned;
+};
+
+const truncateText = (value: string, maxLength = 140): string => {
+  if (value.length <= maxLength) return value;
+  return `${value.substring(0, maxLength - 1).trimEnd()}…`;
+};
+
+const COLLATERAL_METADATA: Record<
+  string,
+  {
+    symbol: string;
+    usdPegged: boolean;
+  }
+> = {
+  '0xe91d153e0b41518a2ce8dd3d7944fa863463a97d': { symbol: 'XDAI', usdPegged: true },
+  '0x0000000000000000000000000000000000000000': { symbol: 'ETH', usdPegged: false },
+};
+
+const getCollateralMetadata = (address?: string | null) => {
+  if (!address) {
+    return { symbol: 'Collateral', usdPegged: false };
+  }
+  const match = COLLATERAL_METADATA[address.toLowerCase()];
+  if (match) {
+    return match;
+  }
+  return { symbol: 'Collateral', usdPegged: false };
+};
+
 const fromWei = (value?: string | null): number => {
   if (!value) return 0;
   const numeric = Number(value);
@@ -51,16 +99,24 @@ const formatDuration = (seconds: number): string => {
 const formatTimeUntil = (timestamp?: number | null): string => {
   if (!timestamp) return 'Unknown';
   const diff = timestamp - nowInSeconds();
-  if (diff <= 0) return 'Expired';
-  return formatDuration(diff);
+  if (diff <= 0) return 'Resolved';
+  return `in ${formatDuration(diff)}`;
 };
 
 const formatTimeAgo = (timestamp: number): string => {
   const diff = nowInSeconds() - timestamp;
-  if (diff < 60) return `${Math.max(1, diff)}s ago`;
-  if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
-  if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
-  return `${Math.floor(diff / 86400)}d ago`;
+  if (diff >= 0) {
+    if (diff < 60) return `${Math.max(1, diff)}s ago`;
+    if (diff < 3600) return `${Math.floor(diff / 60)}m ago`;
+    if (diff < 86400) return `${Math.floor(diff / 3600)}h ago`;
+    return `${Math.floor(diff / 86400)}d ago`;
+  }
+
+  const futureDiff = Math.abs(diff);
+  if (futureDiff < 60) return `in ${Math.max(1, Math.floor(futureDiff))}s`;
+  if (futureDiff < 3600) return `in ${Math.floor(futureDiff / 60)}m`;
+  if (futureDiff < 86400) return `in ${Math.floor(futureDiff / 3600)}h`;
+  return `in ${Math.floor(futureDiff / 86400)}d`;
 };
 
 const inferDirection = (outcomeName: string, outcomeIndex: number): 'YES' | 'NO' => {
@@ -98,6 +154,12 @@ export interface ProcessedPosition {
   pnlPercentage: number;
   timeRemaining: string;
   status: 'OPEN' | 'CLOSED' | 'PENDING';
+  category?: string;
+  entryValue: number;
+  currentValue: number;
+  collateralSymbol: string;
+  collateralIsStable: boolean;
+  marketAddress: string;
 }
 
 export interface ProcessedActivity {
@@ -120,6 +182,7 @@ interface AggregatedPositionState {
   outcomeName: string;
   category: string;
   conditionId?: string | null;
+  collateralToken?: string | null;
   openingTimestamp?: number;
   resolutionTimestamp?: number;
   currentPrice: number;
@@ -177,14 +240,16 @@ const buildTradeAnalytics = (trades: TradeData[]): TradeAnalytics => {
     const outcomes = trade.fpmm.outcomes ?? [];
     const fallbackOutcome =
       outcomeIndex === 0 ? 'YES' : outcomeIndex === 1 ? 'NO' : `Outcome ${outcomeIndex}`;
-    const outcomeName = outcomes[outcomeIndex] ?? fallbackOutcome;
+    const rawOutcomeName = outcomes[outcomeIndex] ?? fallbackOutcome;
+    const outcomeName = sanitizeOutcomeLabel(rawOutcomeName, outcomeIndex);
+    const marketTitle = sanitizeMarketTitle(trade.fpmm.title);
 
     let aggregation = aggregations.get(key);
     if (!aggregation) {
       aggregation = {
         key,
         marketId: trade.fpmm.id,
-        marketTitle: trade.fpmm.title,
+        marketTitle,
         outcomeIndex,
         outcomeName,
         category:
@@ -192,6 +257,7 @@ const buildTradeAnalytics = (trades: TradeData[]): TradeAnalytics => {
           trade.fpmm.question?.category ??
           'General',
         conditionId: trade.fpmm.condition?.id ?? null,
+        collateralToken: trade.fpmm.collateralToken ?? null,
         openingTimestamp: parseTimestamp(trade.fpmm.openingTimestamp),
         resolutionTimestamp: parseTimestamp(trade.fpmm.resolutionTimestamp),
         currentPrice: clamp(
@@ -211,6 +277,10 @@ const buildTradeAnalytics = (trades: TradeData[]): TradeAnalytics => {
       };
       aggregations.set(key, aggregation);
     }
+
+    aggregation.marketTitle = marketTitle;
+    aggregation.outcomeName = outcomeName;
+    aggregation.collateralToken = trade.fpmm.collateralToken ?? aggregation.collateralToken;
 
     const marginalPrice = Number.parseFloat(
       trade.fpmm.outcomeTokenMarginalPrices?.[outcomeIndex] ?? ''
@@ -415,8 +485,8 @@ export const processMarketOpportunities = (
     .sort((a, b) => Number(b.creationTimestamp) - Number(a.creationTimestamp))
     .slice(0, 10)
     .map(market => {
-      const truncatedTitle =
-        market.title.length > 80 ? `${market.title.substring(0, 77)}...` : market.title;
+      const cleanTitle = sanitizeMarketTitle(market.title);
+      const truncatedTitle = truncateText(cleanTitle, 80);
 
       return {
         id: market.id,
@@ -430,7 +500,8 @@ export const processMarketOpportunities = (
 
 export const processUserPositions = (
   positions: UserPosition[],
-  trades: TradeData[]
+  trades: TradeData[],
+  marketsByCondition: Record<string, MarketData> = {},
 ): ProcessedPosition[] => {
   const { aggregations } = buildTradeAnalytics(trades);
   if (aggregations.size === 0) {
@@ -467,29 +538,49 @@ export const processUserPositions = (
       return;
     }
 
+    const marketInfo = aggregation.conditionId
+      ? marketsByCondition[aggregation.conditionId.toLowerCase()]
+      : undefined;
+    const resolvedTimestamp =
+      parseTimestamp(marketInfo?.resolutionTimestamp) ?? aggregation.resolutionTimestamp;
+    const openingTimestamp =
+      parseTimestamp(marketInfo?.openingTimestamp) ?? aggregation.openingTimestamp;
+    const collateralAddress =
+      marketInfo?.collateralToken ?? aggregation.collateralToken ?? undefined;
+    const collateralMeta = getCollateralMetadata(collateralAddress);
+
     const costBasisForHeldTokens =
       aggregation.netTokens > MIN_TOKEN_BALANCE && tokensHeld > 0
         ? aggregation.costBasis * (tokensHeld / aggregation.netTokens)
         : aggregation.costBasis;
 
     const entryPrice = tokensHeld > 0 ? costBasisForHeldTokens / tokensHeld : 0;
-    const currentPrice = aggregation.currentPrice ?? entryPrice;
+    let currentPrice = aggregation.currentPrice ?? entryPrice;
+    const marketPrice = Number.parseFloat(
+      marketInfo?.outcomeTokenMarginalPrices?.[aggregation.outcomeIndex] ?? '',
+    );
+    if (Number.isFinite(marketPrice)) {
+      currentPrice = clamp(marketPrice, 0, 1);
+    }
+
     const unrealizedPnL = tokensHeld * (currentPrice - entryPrice);
     const totalPnL = aggregation.realizedPnL + unrealizedPnL;
     const pnlPercentage =
       costBasisForHeldTokens > 0 ? (totalPnL / costBasisForHeldTokens) * 100 : 0;
-    const isResolved =
-      aggregation.resolutionTimestamp !== undefined &&
-      aggregation.resolutionTimestamp <= now;
+    const isResolved = resolvedTimestamp !== undefined && resolvedTimestamp <= now;
     const status: ProcessedPosition['status'] = isResolved ? 'CLOSED' : 'OPEN';
     const expiryTimestamp = isResolved
-      ? aggregation.resolutionTimestamp
-      : aggregation.openingTimestamp ?? aggregation.resolutionTimestamp;
+      ? resolvedTimestamp
+      : openingTimestamp ?? resolvedTimestamp;
     const timeRemaining = isResolved ? 'Resolved' : formatTimeUntil(expiryTimestamp);
+    const cleanTitle = sanitizeMarketTitle(marketInfo?.title ?? aggregation.marketTitle);
+    const displayTitle = truncateText(cleanTitle, 120);
+    const entryValue = costBasisForHeldTokens;
+    const currentValue = tokensHeld * currentPrice;
 
     processed.push({
       id: aggregation.key,
-      market: aggregation.marketTitle,
+      market: displayTitle,
       direction: inferDirection(aggregation.outcomeName, aggregation.outcomeIndex),
       entryPrice: round(entryPrice),
       currentPrice: round(currentPrice),
@@ -498,6 +589,12 @@ export const processUserPositions = (
       pnlPercentage: round(pnlPercentage),
       timeRemaining,
       status,
+      category: marketInfo?.category ?? aggregation.category,
+      entryValue: round(entryValue),
+      currentValue: round(currentValue),
+      collateralSymbol: collateralMeta.symbol,
+      collateralIsStable: collateralMeta.usdPegged,
+      marketAddress: aggregation.marketId,
     });
   });
 
@@ -509,7 +606,10 @@ export const processUserPositions = (
   });
 };
 
-export const processTradeActivities = (trades: TradeData[]): ProcessedActivity[] => {
+export const processTradeActivities = (
+  trades: TradeData[],
+  marketsByCondition: Record<string, MarketData> = {},
+): ProcessedActivity[] => {
   if (!trades || trades.length === 0) {
     return [];
   }
@@ -528,17 +628,25 @@ export const processTradeActivities = (trades: TradeData[]): ProcessedActivity[]
         trade.fpmm.outcomes?.[Number(trade.outcomeIndex)] ??
         `Outcome ${trade.outcomeIndex}`;
       const action = trade.type === 'Buy' ? 'Bought' : 'Sold';
+      const cleanOutcomeName = sanitizeOutcomeLabel(
+        outcomeName,
+        Number(trade.outcomeIndex ?? '0'),
+      );
       const pnlValue = summary?.realizedPnL ?? 0;
       const hasRealizedPnl = Math.abs(pnlValue) > 0.0001;
 
       const amountLabel =
         tokens > 0 ? `${round(tokens, 2)} @ ${round(price, 2)}` : 'No size recorded';
+      const conditionId = trade.fpmm.condition?.id?.toLowerCase();
+      const marketInfo = conditionId ? marketsByCondition[conditionId] : undefined;
+      const marketTitle = sanitizeMarketTitle(marketInfo?.title ?? trade.fpmm.title);
+      const description = truncateText(`${marketTitle} • ${amountLabel}`, 160);
 
       return {
         id: trade.id,
         type: trade.type === 'Buy' ? 'POSITION_OPENED' : 'POSITION_CLOSED',
-        title: `${action} ${outcomeName}`,
-        description: `${trade.fpmm.title} • ${amountLabel}`,
+        title: `${action} ${cleanOutcomeName}`,
+        description,
         timestamp: formatTimeAgo(Number(trade.creationTimestamp)),
         result: hasRealizedPnl ? { pnl: round(pnlValue) } : undefined,
       };

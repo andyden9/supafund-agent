@@ -52,6 +52,9 @@ export interface MarketData {
   openingTimestamp?: string;
   resolutionTimestamp?: string;
   currentAnswer?: string;
+  condition?: {
+    id: string;
+  } | null;
   question?: {
     id: string;
     title: string;
@@ -221,6 +224,83 @@ export const queryUserPositions = async (userAddress: string): Promise<UserPosit
     console.error('Failed to fetch user positions:', error);
     return [];
   }
+};
+
+const chunkArray = <T>(items: T[], size: number): T[][] => {
+  if (size <= 0) return [items];
+  const chunks: T[][] = [];
+  for (let index = 0; index < items.length; index += size) {
+    chunks.push(items.slice(index, index + size));
+  }
+  return chunks;
+};
+
+export const queryMarketsByCondition = async (
+  conditionIds: string[],
+): Promise<Record<string, MarketData>> => {
+  if (!conditionIds || conditionIds.length === 0) {
+    return {};
+  }
+
+  const uniqueIds = Array.from(
+    new Set(
+      conditionIds
+        .map(id => id?.toLowerCase())
+        .filter((value): value is string => Boolean(value)),
+    ),
+  );
+
+  if (uniqueIds.length === 0) {
+    return {};
+  }
+
+  const query = gql`
+    query MarketsByCondition($conditionIds: [String!]!) {
+      fixedProductMarketMakers(where: { condition_in: $conditionIds }) {
+        id
+        title
+        outcomes
+        outcomeTokenMarginalPrices
+        collateralToken
+        fee
+        creationTimestamp
+        category
+        openingTimestamp
+        resolutionTimestamp
+        currentAnswer
+        condition {
+          id
+        }
+        question {
+          id
+          title
+          category
+        }
+      }
+    }
+  `;
+
+  const results: Record<string, MarketData> = {};
+
+  for (const chunk of chunkArray(uniqueIds, 40)) {
+    try {
+      const response = await request(SUBGRAPH_ENDPOINTS.OMEN, query, {
+        conditionIds: chunk,
+      });
+      const markets = (response as any)?.fixedProductMarketMakers ?? [];
+      markets.forEach(
+        (market: MarketData & { condition?: { id?: string } | null }) => {
+          const conditionId = market.condition?.id?.toLowerCase();
+          if (!conditionId) return;
+          results[conditionId] = market;
+        },
+      );
+    } catch (error) {
+      console.error('Failed to fetch markets by condition:', error);
+    }
+  }
+
+  return results;
 };
 
 // 获取 trader 状态 - 可选的，CORS 问题时返回默认值

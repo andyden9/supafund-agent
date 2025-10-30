@@ -17,6 +17,7 @@ import {
 import {
   fetchTraderHealthStatus,
   queryMarketOpportunities,
+  queryMarketsByCondition,
   queryUserPositions,
   queryUserTrades,
 } from '../utils/subgraph';
@@ -101,11 +102,26 @@ export const useSupafundData = () => {
       // 处理和计算数据
       const calculatedMetrics = calculateMetricsFromTrades(tradesData);
       const processedOpportunities = processMarketOpportunities(marketsData);
+      const conditionIds = new Set<string>();
+      positionsData.forEach(position => {
+        const conditionId = position.position.conditionIds?.[0];
+        if (conditionId) {
+          conditionIds.add(conditionId);
+        }
+      });
+      tradesData.forEach(trade => {
+        const conditionId = trade.fpmm.condition?.id;
+        if (conditionId) {
+          conditionIds.add(conditionId);
+        }
+      });
+      const marketsByCondition = await queryMarketsByCondition(Array.from(conditionIds));
       const processedPositions = processUserPositions(
         positionsData,
         tradesData,
+        marketsByCondition,
       );
-      const processedActivities = processTradeActivities(tradesData);
+      const processedActivities = processTradeActivities(tradesData, marketsByCondition);
 
       // 更新状态
       setMetrics(calculatedMetrics);

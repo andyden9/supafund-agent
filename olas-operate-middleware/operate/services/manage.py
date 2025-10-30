@@ -721,7 +721,7 @@ class ServiceManager:
             mech_request_price_str = "10000000000000000"  # 0.01
             try:
                 if str(user_params.staking_program_id) == "supafund_test":
-                    mech_request_price_str = "80000000000000000"  # 0.08
+                    mech_request_price_str = "10000000000000000"  # 0.01
             except Exception:  # pragma: no cover - be robust if structure changes
                 pass
 

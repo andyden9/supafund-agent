@@ -200,55 +200,69 @@ export const SupafundConfiguration = () => {
           <Form form={form} layout="vertical" style={{ marginTop: '24px' }}>
             {Object.entries(weights).map(([key, value]) => (
               <Card key={key} size="small" style={{ marginBottom: '16px' }}>
-                <Row gutter={16} align="middle">
-                  <Col span={8}>
-                    <Title level={5} style={{ margin: 0 }}>
-                      {key
-                        .split('_')
-                        .map(
-                          (word) =>
-                            word.charAt(0).toUpperCase() + word.slice(1),
-                        )
-                        .join(' & ')}
-                    </Title>
-                    <Text type="secondary" style={{ fontSize: '12px' }}>
+                <div
+                  style={{
+                    display: 'flex',
+                    flexWrap: 'wrap',
+                    alignItems: 'center',
+                    gap: '16px',
+                  }}
+                >
+                  <div style={{ flex: '1 1 280px', minWidth: '240px' }}>
+                    <div
+                      style={{
+                        display: 'flex',
+                        alignItems: 'baseline',
+                        gap: '8px',
+                        flexWrap: 'wrap',
+                      }}
+                    >
+                      <Title level={5} style={{ margin: 0 }}>
+                        {key
+                          .split('_')
+                          .map(word => word.charAt(0).toUpperCase() + word.slice(1))
+                          .join(' & ')}
+                      </Title>
+                      <Text strong style={{ color: value > 0 ? '#1890ff' : '#d9d9d9' }}>
+                        — {value}%
+                      </Text>
+                    </div>
+                    <Text
+                      type="secondary"
+                      style={{ fontSize: '12px', whiteSpace: 'normal' }}
+                    >
                       {
                         weightDescriptions[
                           key as keyof typeof weightDescriptions
                         ]
                       }
                     </Text>
-                  </Col>
-                  <Col span={12}>
+                  </div>
+                  <div
+                    style={{
+                      flex: '2 1 320px',
+                      minWidth: '260px',
+                      padding: '0 20px',
+                    }}
+                  >
                     <Slider
                       min={0}
                       max={100}
                       value={value}
-                      onChange={(val) =>
-                        handleUpdateWeights(
-                          key as keyof SupafundWeights,
-                          val,
-                        )
+                      onChange={val =>
+                        handleUpdateWeights(key as keyof SupafundWeights, val)
                       }
                       marks={{
                         0: '0%',
                         50: '50%',
-                        100: '100%',
+                        100: {
+                          style: { transform: 'translateX(-10px)' },
+                          label: '100%',
+                        },
                       }}
                     />
-                  </Col>
-                  <Col span={4} style={{ textAlign: 'center' }}>
-                    <Title
-                      level={4}
-                      style={{
-                        margin: 0,
-                        color: value > 0 ? '#1890ff' : '#d9d9d9',
-                      }}
-                    >
-                      {value}%
-                    </Title>
-                  </Col>
-                </Row>
+                  </div>
+                </div>
               </Card>
             ))}
           </Form>
