@@ -1,3 +1,4 @@
+import { isEqual } from 'lodash';
 import { ethers } from 'ethers';
 import { formatEther } from 'ethers/lib/utils';
 
@@ -23,6 +24,22 @@ const MECH_REQUESTS_SAFETY_MARGIN = 1;
  * Supafund Service
  * Extends StakedAgentService to provide proper integration with staking programs
  */
+type SupafundWeightsConfig = {
+  founder_team: number;
+  market_opportunity: number;
+  technical_analysis: number;
+  social_sentiment: number;
+  tokenomics: number;
+};
+
+const BALANCED_WEIGHTS: SupafundWeightsConfig = {
+  founder_team: 20,
+  market_opportunity: 20,
+  technical_analysis: 20,
+  social_sentiment: 20,
+  tokenomics: 20,
+};
+
 export abstract class SupafundService extends StakedAgentService {
   static getAgentStakingRewardsInfo = async ({
     agentMultisigAddress,
@@ -52,16 +69,18 @@ export abstract class SupafundService extends StakedAgentService {
       throw new Error('Activity checker contract is not defined');
     }
 
-    if (!mechContract) {
-      console.warn('SupafundService: mech contract is not configured', {
-        chainId,
-        stakingProgramId,
-      });
-    }
-
     const provider = PROVIDERS[chainId].multicallProvider;
 
-    const contractCalls = [
+    const contractCalls: any[] = [];
+
+    const shouldFetchMechCount =
+      mechContract && typeof mechContract.getRequestsCount === 'function';
+
+    if (shouldFetchMechCount) {
+      contractCalls.push(mechContract!.getRequestsCount(agentMultisigAddress));
+    }
+
+    contractCalls.push(
       activityChecker.getMultisigNonces(agentMultisigAddress),
       stakingTokenProxyContract.getServiceInfo(serviceId),
       stakingTokenProxyContract.livenessPeriod(),
@@ -70,19 +89,24 @@ export abstract class SupafundService extends StakedAgentService {
       stakingTokenProxyContract.calculateStakingReward(serviceId),
       stakingTokenProxyContract.minStakingDeposit(),
       stakingTokenProxyContract.tsCheckpoint(),
-    ];
+    );
+
     const multicallResponse = await provider.all(contractCalls);
 
-    const [
-      multisigNonces,
-      serviceInfo,
-      livenessPeriod,
-      livenessRatio,
-      rewardsPerSecond,
-      accruedStakingReward,
-      minStakingDeposit,
-      tsCheckpoint,
-    ] = multicallResponse;
+    let responseIndex = 0;
+
+    const mechRequestCountRaw = shouldFetchMechCount
+      ? multicallResponse[responseIndex++]
+      : null;
+
+    const multisigNonces = multicallResponse[responseIndex++];
+    const serviceInfo = multicallResponse[responseIndex++];
+    const livenessPeriod = multicallResponse[responseIndex++];
+    const livenessRatio = multicallResponse[responseIndex++];
+    const rewardsPerSecond = multicallResponse[responseIndex++];
+    const accruedStakingReward = multicallResponse[responseIndex++];
+    const minStakingDeposit = multicallResponse[responseIndex++];
+    const tsCheckpoint = multicallResponse[responseIndex++];
 
     const nowInSeconds = Math.floor(Date.now() / 1000);
 
@@ -92,24 +116,32 @@ export abstract class SupafundService extends StakedAgentService {
         1e18 +
       MECH_REQUESTS_SAFETY_MARGIN;
 
-    const currentRequestCountRaw = Array.isArray(multisigNonces)
-      ? multisigNonces[0]
-      : multisigNonces;
-
-    const currentRequestCount =
-      typeof currentRequestCountRaw?.toNumber === 'function'
-        ? currentRequestCountRaw.toNumber()
-        : Number(currentRequestCountRaw ?? 0);
-
     const serviceNonces = Array.isArray(serviceInfo?.[2])
       ? serviceInfo[2]
       : [];
-    const checkpointNonceRaw =
-      serviceNonces[1] ?? serviceNonces[0] ?? 0;
+    const lastCheckpointNonceRaw = serviceNonces[1] ?? serviceNonces[0] ?? 0;
     const checkpointNonce =
-      typeof checkpointNonceRaw?.toNumber === 'function'
-        ? checkpointNonceRaw.toNumber()
-        : Number(checkpointNonceRaw ?? 0);
+      typeof lastCheckpointNonceRaw?.toNumber === 'function'
+        ? lastCheckpointNonceRaw.toNumber()
+        : Number(lastCheckpointNonceRaw ?? 0);
+
+    const fallbackNonceRaw = Array.isArray(multisigNonces)
+      ? multisigNonces[0]
+      : multisigNonces;
+    const fallbackRequestCount =
+      typeof fallbackNonceRaw?.toNumber === 'function'
+        ? fallbackNonceRaw.toNumber()
+        : Number(fallbackNonceRaw ?? 0);
+
+    const mechRequestCount =
+      mechRequestCountRaw && typeof mechRequestCountRaw.toNumber === 'function'
+        ? mechRequestCountRaw.toNumber()
+        : undefined;
+
+    const currentRequestCount =
+      mechRequestCount && mechRequestCount > checkpointNonce
+        ? mechRequestCount
+        : Math.max(mechRequestCount ?? 0, fallbackRequestCount);
 
     const eligibleRequests = Math.max(
       currentRequestCount - checkpointNonce,
@@ -156,6 +188,9 @@ export abstract class SupafundService extends StakedAgentService {
       minimumStakedAmount,
       currentRequestCount,
       checkpointNonce,
+      mechRequestCount: currentRequestCount,
+      eligibleRequests,
+      requiredMechRequests,
       // extra fields (ignored by Zod) for potential Supafund UI usage
       serviceId,
       stakingProgramId,
@@ -197,13 +232,7 @@ export abstract class SupafundService extends StakedAgentService {
 
     // Return default configuration
     return {
-      weights: {
-        founder_team: 20,
-        market_opportunity: 20,
-        technical_analysis: 20,
-        social_sentiment: 20,
-        tokenomics: 20,
-      },
+      weights: { ...BALANCED_WEIGHTS },
       minEdgeThreshold: 5,
       riskTolerance: 5,
     };
@@ -214,13 +243,7 @@ export abstract class SupafundService extends StakedAgentService {
    */
   static updateSupafundConfig = async (
     config: {
-      weights?: {
-        founder_team: number;
-        market_opportunity: number;
-        technical_analysis: number;
-        social_sentiment: number;
-        tokenomics: number;
-      };
+      weights?: SupafundWeightsConfig;
       minEdgeThreshold?: number;
       riskTolerance?: number;
       apiEndpoint?: string;
@@ -247,22 +270,26 @@ export abstract class SupafundService extends StakedAgentService {
 
       // Update weights if provided
       if (config.weights) {
+        const weights = config.weights;
         envVariables.SUPAFUND_WEIGHTS = {
           name: 'Supafund agent weights configuration',
           description: 'JSON string with weights for: founder_team, market_opportunity, technical_analysis, social_sentiment, tokenomics',
-          value: JSON.stringify(config.weights),
-          provision_type: 'USER' as any,
+          value: JSON.stringify(weights),
+          provision_type: 'user',
         };
         
         // Update PROMPT_TEMPLATE to include weights in AI analysis
-        const weightsStr = JSON.stringify(config.weights);
-        const promptWithWeights = `With the given question "@{question}" and the \`yes\` option represented by \`@{yes}\` and the \`no\` option represented by \`@{no}\`, what are the respective probabilities of \`p_yes\` and \`p_no\` occurring? Please consider following weights when analysis: ${weightsStr}`;
+        const promptBase = 'With the given question "@{question}" and the `yes` option represented by `@{yes}` and the `no` option represented by `@{no}`, what are the respective probabilities of `p_yes` and `p_no` occurring?';
+        const shouldAppendWeights = !isEqual(weights, BALANCED_WEIGHTS);
+        const promptWithWeights = shouldAppendWeights
+          ? `${promptBase} Please consider the following weights when analyzing: ${JSON.stringify(weights)}`
+          : promptBase;
         
         envVariables.PROMPT_TEMPLATE = {
           name: 'Prompt template with Supafund weights',
           description: 'AI prompt template that includes Supafund analysis weights for decision making',
           value: promptWithWeights,
-          provision_type: 'USER' as any,
+          provision_type: 'user',
         };
       }
 
@@ -272,7 +299,7 @@ export abstract class SupafundService extends StakedAgentService {
           name: 'Minimum edge threshold',
           description: 'Minimum edge percentage required to place a bet',
           value: config.minEdgeThreshold.toString(),
-          provision_type: 'USER' as any,
+          provision_type: 'user',
         };
       }
 
@@ -282,7 +309,7 @@ export abstract class SupafundService extends StakedAgentService {
           name: 'Risk tolerance',
           description: 'Risk tolerance level (1-10)',
           value: config.riskTolerance.toString(),
-          provision_type: 'USER' as any,
+          provision_type: 'user',
         };
       }
 
@@ -292,7 +319,7 @@ export abstract class SupafundService extends StakedAgentService {
           name: 'Supafund API endpoint',
           description: 'API endpoint for Supafund backend services',
           value: config.apiEndpoint,
-          provision_type: 'USER' as any,
+          provision_type: 'user',
         };
       }
       
@@ -311,14 +338,8 @@ export abstract class SupafundService extends StakedAgentService {
    * Update Supafund weights and sync to service (legacy method)
    */
   static updateSupafundWeights = async (
-    weights: {
-      founder_team: number;
-      market_opportunity: number;
-      technical_analysis: number;
-      social_sentiment: number;
-      tokenomics: number;
-    },
-    serviceConfigId?: string
+    weights: SupafundWeightsConfig,
+    serviceConfigId?: string,
   ) => {
     return SupafundService.updateSupafundConfig({ weights }, serviceConfigId);
   };

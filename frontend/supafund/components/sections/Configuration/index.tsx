@@ -14,6 +14,7 @@ import {
 import React, { useCallback, useEffect, useState } from 'react';
 
 import { CardFlex } from '@/components/styled/CardFlex';
+import { MiddlewareDeploymentStatus } from '@/client';
 import { AgentType } from '@/enums/Agent';
 import { Pages } from '@/enums/Pages';
 import { usePageState } from '@/hooks/usePageState';
@@ -54,7 +55,11 @@ const weightDescriptions = {
 
 export const SupafundConfiguration = () => {
   const { goto } = usePageState();
-  const { selectedAgentType, selectedService } = useServices();
+  const {
+    selectedAgentType,
+    selectedService,
+    overrideSelectedServiceStatus,
+  } = useServices();
   const [form] = Form.useForm();
   const [weights, setWeights] = useState<SupafundWeights>(defaultWeights);
   const [isLoading, setIsLoading] = useState(true);
@@ -112,25 +117,49 @@ export const SupafundConfiguration = () => {
 
       // Restart agent to apply new configuration
       if (selectedService?.service_config_id) {
-        message.loading('Restarting agent to apply new configuration...', 0);
-        
+        const restartMessageKey = 'supafund-restart';
+        message.loading({
+          content: 'Restarting agent to apply new configuration...',
+          key: restartMessageKey,
+          duration: 0,
+        });
+        overrideSelectedServiceStatus?.(
+          MiddlewareDeploymentStatus.STOPPING,
+        );
+
         try {
-          await SupafundService.restartSupafundService(selectedService.service_config_id);
-          message.destroy();
-          message.success('Agent restarted successfully! New configuration is now active.');
+          await SupafundService.restartSupafundService(
+            selectedService.service_config_id,
+          );
+          message.success({
+            content: 'Agent restarted successfully! New configuration is now active.',
+            key: restartMessageKey,
+          });
         } catch (restartError) {
-          message.destroy();
           console.error('Restart error:', restartError);
           
           // More detailed error message
           const errorMsg = restartError.message || 'Unknown error';
           if (errorMsg.includes('500')) {
-            message.error('Server error during restart. Please check agent logs and try restarting manually.');
+            message.error({
+              content:
+                'Server error during restart. Please check agent logs and try restarting manually.',
+              key: restartMessageKey,
+            });
           } else if (errorMsg.includes('connection')) {
-            message.warning('Connection issue during restart. Please check if the agent service is running.');
+            message.warning({
+              content:
+                'Connection issue during restart. Please check if the agent service is running.',
+              key: restartMessageKey,
+            });
           } else {
-            message.warning(`Configuration saved but restart failed: ${errorMsg}. You may need to restart manually.`);
+            message.warning({
+              content: `Configuration saved but restart failed: ${errorMsg}. You may need to restart manually.`,
+              key: restartMessageKey,
+            });
           }
+        } finally {
+          overrideSelectedServiceStatus?.(undefined);
         }
       }
 
@@ -144,7 +173,12 @@ export const SupafundConfiguration = () => {
     } finally {
       setIsSaving(false);
     }
-  }, [weights, goto, selectedService?.service_config_id]);
+  }, [
+    weights,
+    goto,
+    selectedService?.service_config_id,
+    overrideSelectedServiceStatus,
+  ]);
 
   if (!isSupafundAgent) {
     return (
@@ -181,7 +215,7 @@ export const SupafundConfiguration = () => {
         </Col>
       </Row>
 
-      <Card>
+      <Card bodyStyle={{ padding: '0 24px 24px' }}>
         <Title level={3}>Agent Configuration</Title>
         <Text type="secondary">
           Customize your agent&apos;s trading strategy by adjusting the weight
