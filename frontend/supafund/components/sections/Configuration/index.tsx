@@ -139,7 +139,10 @@ export const SupafundConfiguration = () => {
           console.error('Restart error:', restartError);
           
           // More detailed error message
-          const errorMsg = restartError.message || 'Unknown error';
+          const errorMsg =
+            restartError instanceof Error
+              ? restartError.message
+              : String(restartError ?? 'Unknown error');
           if (errorMsg.includes('500')) {
             message.error({
               content:

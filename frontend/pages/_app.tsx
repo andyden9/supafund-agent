@@ -29,9 +29,15 @@ import { mainTheme } from '@/theme';
 
 const queryClient = new QueryClient();
 
+declare global {
+  interface Window {
+    queryClient?: QueryClient;
+  }
+}
+
 // Expose queryClient to window for debugging in browser mode
 if (typeof window !== 'undefined') {
-  (window as any).queryClient = queryClient;
+  window.queryClient = queryClient;
 }
 
 export default function App({ Component, pageProps }: AppProps) {

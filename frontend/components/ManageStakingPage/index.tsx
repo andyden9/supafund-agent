@@ -59,9 +59,17 @@ export const ManageStakingPage = () => {
     ? activeStakingProgramId || defaultStakingProgramId
     : null;
 
-  const stakingProgramIdsAvailable = Object.keys(
-    STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId],
-  ).map((stakingProgramIdKey) => stakingProgramIdKey as StakingProgramId);
+  const stakingProgramsForChain = useMemo(
+    () => STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId] ?? {},
+    [selectedAgentConfig.evmHomeChainId],
+  );
+  const stakingProgramIdsAvailable = useMemo(
+    () =>
+      Object.keys(stakingProgramsForChain).map(
+        (stakingProgramIdKey) => stakingProgramIdKey as StakingProgramId,
+      ),
+    [stakingProgramsForChain],
+  );
 
   const orderedStakingProgramIds = useMemo(
     () =>
@@ -75,11 +83,9 @@ export const ManageStakingPage = () => {
           }
 
           // if the program is deprecated, ignore it
-          if (
-            STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId][
-              stakingProgramId
-            ].deprecated
-          ) {
+          const stakingProgramConfig =
+            stakingProgramsForChain[stakingProgramId];
+          if (stakingProgramConfig?.deprecated) {
             return acc;
           }
 
@@ -90,9 +96,9 @@ export const ManageStakingPage = () => {
       ),
     [
       isActiveStakingProgramLoaded,
-      selectedAgentConfig.evmHomeChainId,
       currentStakingProgramId,
       stakingProgramIdsAvailable,
+      stakingProgramsForChain,
     ],
   );
 
@@ -100,8 +106,7 @@ export const ManageStakingPage = () => {
     (stakingProgramId) => {
       if (!isActiveStakingProgramLoaded) return false;
 
-      const info =
-        STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId][stakingProgramId];
+      const info = stakingProgramsForChain[stakingProgramId];
 
       if (!info) return false;
       if (currentStakingProgramId === stakingProgramId) return false;

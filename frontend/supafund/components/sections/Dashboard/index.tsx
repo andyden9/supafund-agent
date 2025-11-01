@@ -67,7 +67,7 @@ export const SupafundDashboard = ({
         <div style={{ marginBottom: '20px' }}>
           <Button
             icon={<ArrowLeftOutlined />}
-            onClick={() => goto(Pages.SwitchAgent)}
+            onClick={() => goto(Pages.Main)}
             type="text"
             style={{
               padding: '4px 8px',
@@ -75,7 +75,7 @@ export const SupafundDashboard = ({
               fontSize: '14px',
             }}
           >
-            Switch Agent
+            Back to main
           </Button>
         </div>
       )}

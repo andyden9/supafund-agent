@@ -1,123 +1,64 @@
-# OLAS Agents - Quickstart
+# Supafund Quickstart
 
-A quickstart to run OLAS agents
+Supafund quickstart 用于在本地快速启动 Supafund 预测代理。以下步骤默认在 `quickstart/` 目录下执行。
 
-## Compatible Systems
+## 环境要求
 
-- Windows 10/11: WSL2 (Recommended) / Git BASH
-- Mac ARM / Intel
-- Linux
-- Raspberry Pi 4
+- Python `== 3.10`
+- [Poetry](https://python-poetry.org/docs/) `>= 1.8.3`
+- Docker & Docker Compose
 
-## System Requirements
-
-Ensure your machine satisfies the requirements:
-
-- Python `==3.10`
-- [Poetry](https://python-poetry.org/docs/) `>=1.8.3`
-- [Docker Compose](https://docs.docker.com/compose/install/)
-
-## Resource Requirements
-
-- You need native assets of the chain on which your agent will run in one of your wallets.
-- You need an RPC for your agent instance. We recommend [Quicknode RPC](https://www.quicknode.com/).
-
-## Run the Service
-
-Clone this repository locally and execute:
+## 如何运行
 
 ```bash
-chmod +x run_service.sh
-./run_service.sh <agent_config.json>
-```
-where `agent_config.json` is the path to your agent configuration file. Check the `configs/` directory for available configurations of different agents.
-
-#### Supported agents
-
-| Agent | Config path | Docs |
-| --- | --- | --- |
-| Trader | `configs/config_predict_trader.json` | [Trader README](scripts/predict_trader/README.md) |
-| Mech | `configs/config_mech.json` | [Mech README](https://github.com/valory-xyz/mech) |
-| Optimus | `configs/config_optimus.json` | [Optimus README](https://github.com/valory-xyz/optimus) |
-| Modius | `configs/config_modius.json` | [Modius README](https://github.com/valory-xyz/modius-quickstart) |
-| Agents.fun | `configs/config_agents.fun.json` | [Agents.fun README](https://github.com/dvilelaf/meme-ooorr) |
-
-### For Non-Stakers
-
-Answer `1) No staking` when prompted:
-
-```text
-Please, select your staking program preference
+poetry install
+poetry run ./start_supafund.sh
 ```
 
-### For Stakers
+脚本会载入 `configs/config_supafund.json`，初始化 `.operate/` 工作目录并启动所有所需容器。Supafund UI 默认暴露在 `http://localhost:8716`。
 
-> :warning: **Warning** <br />
-> The code within this repository is provided without any warranties. It is important to note that the code has not been audited for potential security vulnerabilities.
-> Using this code could potentially lead to loss of funds, compromised data, or asset risk.
-> Exercise caution and use this code at your own risk. Please refer to the [LICENSE](./LICENSE) file for details about the terms and conditions.
+### 常用命令
 
-Each staking program has different OLAS requirements. The script will check that your owner address meets the minimum required OLAS on the required Chain.
+```bash
+# 停止服务
+poetry run ./stop_service.sh configs/config_supafund.json
 
-Select your preferred staking program when prompted (example):
+# 重置交互式配置
+poetry run ./reset_configs.sh configs/config_supafund.json
 
-```text
-Please, select your staking program preference
-----------------------------------------------
-1) No staking
-   Your Olas Predict agent will still actively participate in prediction
-   markets, but it will not be staked within any staking program.
-
-2) Quickstart Beta - Hobbyist
-   The Quickstart Beta - Hobbyist staking contract offers 100 slots for
-   operators running Olas Predict agents with the quickstart. It is designed as
-   a step up from Coastal Staker Expeditions, requiring 100 OLAS for staking.
-   The rewards are also more attractive than with Coastal Staker Expeditions.
-
-3) Quickstart Beta - Expert
-   The Quickstart Beta - Expert staking contract offers 20 slots for operators
-   running Olas Predict agents with the quickstart. It is designed for
-   professional agent operators, requiring 1000 OLAS for staking. The rewards
-   are proportional to the Quickstart Beta - Hobbyist.
-
-...
+# 查看健康状态
+poetry run ./check_service_status.sh configs/config_supafund.json
 ```
 
-Find below a diagram of the possible status a service can be in the staking program:
+### 可选环境变量
 
-![Staking FSM](images/staking_fsm.svg)
+```bash
+export SUPAFUND_API_ENDPOINT="https://api.supafund.xyz"
+export SUPAFUND_WEIGHTS='{"founder_team":20,"market_opportunity":20,"technical_analysis":20,"social_sentiment":20,"tokenomics":20}'
+export MIN_EDGE_THRESHOLD=5
+export RISK_TOLERANCE=5
+```
 
-Services can become staked by invoking the `stake()` contract method, where service parameters and deposit amounts are verified. Staked services can call the `checkpoint()` method at regular intervals, ensuring liveness checks and calculating staking rewards. In case a service remains inactive beyond the specified `maxAllowedInactivity` time, it faces eviction from the staking program, ceasing to accrue additional rewards. Staked or evicted services can be unstaked by calling the `unstake()` contract method. They can do so after `minStakingDuration` has passed or if no more staking rewards are available.
+如未设置，脚本会在启动时提示输入。
 
- __Notes__:
+## 调试与排查
 
-- Staking is currently in a testing phase, so the number of agents that can be staked might be limited.
-- Services are evicted after accumulating 2 consecutive checkpoints without meeting the activity threshold.  
-- Currently, the minimum staking time is approximately 3 days. In particular, a service cannot be unstaked during the minimum staking period.
-- Once a staking program is selected, you can reset your preference by stopping your agent by running `./stop_service.sh <agent_config.json>` and then running the command
+- **查看实时日志**
 
-  ``` bash
-  ./reset_staking.sh  <agent_config.json>
+  ```bash
+  docker logs $(docker ps --filter "name=supafund" --format "{{.Names}}" | head -n 1) --follow
   ```
 
-  Keep in mind that your service must stay for `minStakingDuration` in a staking program (typically 3 days) before you can change to a new program.
+- **分析代理状态机**
 
-### Service is Running
+  ```bash
+  poetry run ./analyse_logs.sh configs/config_supafund.json --agent=aea_0 --fsm
+  ```
 
-Once the command has completed, i.e. the service is running, you can see the live logs with:
+- **更多文档**
 
-```bash
-docker logs $(docker ps --filter "name=<agent_name>" --format "{{.Names}}" | grep "_abci" | head -n 1) --follow
-```
-Replace `<agent_name>` with the name of the agent. For example: `trader`.
-
-You can also use this command to investigate your agent's logs:
-
-```bash
-./analyse_logs.sh <agent_config.json> --agent=aea_0 --reset-db
-```
-
-For example, inspect the state transitions using this command:
+  - `SUPAFUND_SETUP.md`：Supafund 代理配置与启动流程。
+  - `TROUBLESHOOTING_REPORT.md`：常见问题汇总。
 
 ```bash
 ./analyse_logs.sh <agent_config.json> --agent=aea_0 --reset-db --fsm

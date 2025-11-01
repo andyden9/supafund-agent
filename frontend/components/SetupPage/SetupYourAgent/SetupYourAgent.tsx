@@ -11,10 +11,6 @@ import { SupafundAgentForm } from '@/supafund/components/sections/SetupForm/Supa
 import { LOCAL_FORM_THEME } from '@/theme';
 
 import { SetupCreateHeader } from '../Create/SetupCreateHeader';
-import { AgentsFunAgentSetup } from './AgentsFunAgentSetup';
-import { ModiusAgentForm } from './ModiusAgentForm/ModiusAgentForm';
-import { OptimusAgentForm } from './OptimusAgentForm/OptimusAgentForm';
-import { PredictAgentSetup } from './PredictAgentSetup';
 
 const { Title, Text } = Typography;
 
@@ -43,18 +39,6 @@ export const SetupYourAgent = () => {
           Set up your agent
         </Title>
 
-        {selectedAgentType === AgentType.PredictTrader && (
-          <PredictAgentSetup serviceTemplate={serviceTemplate} />
-        )}
-        {selectedAgentType === AgentType.AgentsFun && (
-          <AgentsFunAgentSetup serviceTemplate={serviceTemplate} />
-        )}
-        {selectedAgentType === AgentType.Modius && (
-          <ModiusAgentForm serviceTemplate={serviceTemplate} />
-        )}
-        {selectedAgentType === AgentType.Optimus && (
-          <OptimusAgentForm serviceTemplate={serviceTemplate} />
-        )}
         {selectedAgentType === AgentType.Supafund && (
           <SupafundAgentForm serviceTemplate={serviceTemplate} />
         )}

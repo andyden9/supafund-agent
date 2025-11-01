@@ -1,5 +1,8 @@
 import { z } from 'zod';
 
+import { StakingProgramId } from '@/enums/StakingProgram';
+import { Address } from '@/types/Address';
+
 const zodBigNumber = z.object({
   _isBigNumber: z.boolean(),
   _hex: z.string().startsWith('0x'),
@@ -47,6 +50,15 @@ export type StakingContractDetails = {
 };
 
 export type ServiceStakingDetails = {
+  serviceId: number;
+  stakingProgramId: StakingProgramId;
+  multisig: Address;
+  owner: Address;
+  nonces: number[];
+  tsStart: number;
+  reward: number;
+  inactivity: number;
+  minStakingDeposit: number;
   /** time when service was 'last' staked (in seconds) - (0 = never staked) */
   serviceStakingStartTime: number;
   /** 0: not staked, 1: staked, 2: evicted */

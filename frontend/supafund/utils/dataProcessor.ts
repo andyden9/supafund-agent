@@ -257,7 +257,7 @@ const buildTradeAnalytics = (trades: TradeData[]): TradeAnalytics => {
           trade.fpmm.question?.category ??
           'General',
         conditionId: trade.fpmm.condition?.id ?? null,
-        collateralToken: trade.fpmm.collateralToken ?? null,
+        collateralToken: trade.collateralToken ?? null,
         openingTimestamp: parseTimestamp(trade.fpmm.openingTimestamp),
         resolutionTimestamp: parseTimestamp(trade.fpmm.resolutionTimestamp),
         currentPrice: clamp(
@@ -280,7 +280,7 @@ const buildTradeAnalytics = (trades: TradeData[]): TradeAnalytics => {
 
     aggregation.marketTitle = marketTitle;
     aggregation.outcomeName = outcomeName;
-    aggregation.collateralToken = trade.fpmm.collateralToken ?? aggregation.collateralToken;
+    aggregation.collateralToken = trade.collateralToken ?? aggregation.collateralToken;
 
     const marginalPrice = Number.parseFloat(
       trade.fpmm.outcomeTokenMarginalPrices?.[outcomeIndex] ?? ''

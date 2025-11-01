@@ -1,0 +1,11 @@
+{
+  "address": "0x6de7924a6A3D09CCAE777dDf7Ba2D261A6B0a913",
+  "safes": {
+    "gnosis": "0xaFBA18C8ADb28F06f2ec3ba564fb60577562045a"
+  },
+  "safe_chains": [
+    "gnosis"
+  ],
+  "ledger_type": "ethereum",
+  "safe_nonce": 63575681879510277616337753546201685706645054483256970600417237550303816585777
+}

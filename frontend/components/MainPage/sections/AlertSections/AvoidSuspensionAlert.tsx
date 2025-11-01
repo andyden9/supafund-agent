@@ -70,7 +70,8 @@ export const AvoidSuspensionAlert = () => {
           <Button
             type="primary"
             ghost
-            onClick={() => store?.set?.('agentEvictionAlertShown', true)}
+            loading={isUpdating}
+            onClick={handleDismiss}
             style={{ marginTop: 4 }}
           >
             Understood

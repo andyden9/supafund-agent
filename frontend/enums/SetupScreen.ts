@@ -5,7 +5,6 @@ export const SetupScreen = {
   SetupPassword: 'SetupPassword',
   SetupSeedPhrase: 'SetupSeedPhrase',
   SetupBackupSigner: 'SetupBackupSigner',
-  AgentSelection: 'AgentSelection',
   SetupYourAgent: 'SetupYourAgent',
   SetupEoaFunding: 'SetupEoaFunding',
   SetupEoaFundingIncomplete: 'SetupEoaFundingIncomplete',

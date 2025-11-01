@@ -28,7 +28,7 @@ export const useStakingProgram = () => {
   }, [selectedAgentConfig.evmHomeChainId]);
 
   const allStakingProgramNameAddressPair =
-    STAKING_PROGRAM_ADDRESS[selectedAgentConfig.evmHomeChainId];
+    STAKING_PROGRAM_ADDRESS[selectedAgentConfig.evmHomeChainId] ?? {};
 
   const activeStakingProgramMeta = useMemo(() => {
     if (!isActiveStakingProgramLoaded) return null;
@@ -44,21 +44,25 @@ export const useStakingProgram = () => {
 
   const activeStakingProgramAddress: Nullable<Address> = useMemo(() => {
     if (!activeStakingProgramId) return null;
-    return allStakingProgramNameAddressPair[activeStakingProgramId];
+    return allStakingProgramNameAddressPair[activeStakingProgramId] ?? null;
   }, [allStakingProgramNameAddressPair, activeStakingProgramId]);
 
   const defaultStakingProgramMeta = useMemo(() => {
     if (!defaultStakingProgramId) return null;
-    return STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId][
-      defaultStakingProgramId
-    ];
+    return (
+      STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId]?.[
+        defaultStakingProgramId
+      ] ?? null
+    );
   }, [defaultStakingProgramId, selectedAgentConfig.evmHomeChainId]);
 
   const selectedStakingProgramMeta = useMemo(() => {
     if (!selectedStakingProgramId) return null;
-    return STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId][
-      selectedStakingProgramId
-    ];
+    return (
+      STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId]?.[
+        selectedStakingProgramId
+      ] ?? null
+    );
   }, [selectedAgentConfig.evmHomeChainId, selectedStakingProgramId]);
 
   return {
@@ -79,7 +83,9 @@ export const useStakingProgram = () => {
 
     // all staking programs
     allStakingProgramIds: Object.keys(allStakingProgramNameAddressPair),
-    allStakingProgramAddress: Object.values(allStakingProgramNameAddressPair),
+    allStakingProgramAddress: Object.values(
+      allStakingProgramNameAddressPair,
+    ),
     allStakingProgramsMeta,
   };
 };

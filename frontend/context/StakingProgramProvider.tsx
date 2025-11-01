@@ -4,11 +4,9 @@ import {
   createContext,
   PropsWithChildren,
   useCallback,
-  useEffect,
   useState,
 } from 'react';
 
-import { DEFAULT_STAKING_PROGRAM_IDS } from '@/config/stakingPrograms';
 import { STAKING_PROGRAM_IDS } from '@/enums/StakingProgram';
 import { FIVE_SECONDS_INTERVAL } from '@/constants/intervals';
 import { REACT_QUERY_KEYS } from '@/constants/react-query-keys';
@@ -93,23 +91,11 @@ const useGetActiveStakingProgramId = (serviceNftTokenId: Maybe<number>) => {
  * even if deployment is still in progress
  */
 export const StakingProgramProvider = ({ children }: PropsWithChildren) => {
-  const { selectedService, selectedAgentConfig } = useServices();
+  const { selectedService } = useServices();
 
   const [defaultStakingProgramId, setDefaultStakingProgramId] = useState(
-    selectedAgentConfig?.name === 'Supafund Agent'
-      ? STAKING_PROGRAM_IDS.SupafundTest
-      : DEFAULT_STAKING_PROGRAM_IDS[selectedAgentConfig.evmHomeChainId],
+    STAKING_PROGRAM_IDS.SupafundTest,
   );
-
-  useEffect(() => {
-    if (selectedAgentConfig?.name === 'Supafund Agent') {
-      setDefaultStakingProgramId(STAKING_PROGRAM_IDS.SupafundTest);
-    } else {
-      setDefaultStakingProgramId(
-        DEFAULT_STAKING_PROGRAM_IDS[selectedAgentConfig.evmHomeChainId],
-      );
-    }
-  }, [selectedAgentConfig]);
 
   const serviceNftTokenId = isNil(selectedService?.chain_configs)
     ? null

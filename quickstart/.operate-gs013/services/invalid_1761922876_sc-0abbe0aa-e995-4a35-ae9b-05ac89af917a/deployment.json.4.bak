@@ -1,0 +1,11 @@
+{
+  "status": 1,
+  "nodes": {
+    "agent": [
+      "tradero6nF_abci_0"
+    ],
+    "tendermint": [
+      "tradero6nF_tm_0"
+    ]
+  }
+}

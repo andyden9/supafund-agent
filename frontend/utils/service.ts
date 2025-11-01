@@ -2,10 +2,7 @@ import { isEmpty, isEqual, isNil } from 'lodash';
 
 import { ServiceTemplate } from '@/client';
 import { EnvProvisionMap } from '@/constants/envVariables';
-import {
-  KPI_DESC_PREFIX,
-  SERVICE_TEMPLATES,
-} from '@/constants/serviceTemplates';
+import { SERVICE_TEMPLATES } from '@/constants/serviceTemplates';
 import { AgentType } from '@/enums/Agent';
 import { StakingProgramId } from '@/enums/StakingProgram';
 import { ServicesService } from '@/service/Services';
@@ -32,16 +29,8 @@ export const updateServiceIfNeeded = async (
   }
 
   // Temporary: check if the service has incorrect name
-  if (
-    serviceTemplate.agentType === AgentType.AgentsFun &&
-    service.name !== serviceTemplate.name
-  ) {
+  if (service.name !== serviceTemplate.name) {
     partialServiceTemplate.name = serviceTemplate.name;
-  }
-
-  // If the description doesn't include "[Pearl service]" then update it
-  if (!service.description.includes(KPI_DESC_PREFIX)) {
-    partialServiceTemplate.description = `${KPI_DESC_PREFIX} ${service.description}`;
   }
 
   // Check if there's a need to update or add env variables

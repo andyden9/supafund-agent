@@ -209,14 +209,14 @@ const ContractRewards = ({
   selectedAgentConfig,
 }: ContractRewardsProps) => {
   const stakingProgramMeta =
-    STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId][stakingProgramId];
+    STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId]?.[stakingProgramId];
   const { availableRewardsForEpochEth: reward, isEligibleForRewards } =
     useRewardContext();
 
   const contractName = useMemo(() => {
     return (
       <ContractName>
-        <Text strong>{stakingProgramMeta.name}</Text>
+        <Text strong>{stakingProgramMeta?.name ?? 'Supafund staking'}</Text>
       </ContractName>
     );
   }, [stakingProgramMeta]);
@@ -306,9 +306,10 @@ export const RewardsHistory = () => {
       <Flex vertical gap={16}>
         {latestContractAddresses.map((contractAddress: string) => {
           const checkpoints = contractCheckpoints[contractAddress];
-          const [stakingProgramId] = Object.entries(
-            STAKING_PROGRAM_ADDRESS[selectedAgentConfig.evmHomeChainId],
-          ).find((entry) => {
+          const stakingProgramEntries = Object.entries(
+            STAKING_PROGRAM_ADDRESS[selectedAgentConfig.evmHomeChainId] ?? {},
+          );
+          const [stakingProgramId] = stakingProgramEntries.find((entry) => {
             const [, stakingProxyAddress] = entry;
             return (
               stakingProxyAddress.toLowerCase() ===

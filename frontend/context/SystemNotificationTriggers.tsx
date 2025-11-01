@@ -15,7 +15,7 @@ export const SystemNotificationTriggers = ({ children }: PropsWithChildren) => {
   const { selectedService } = useServices();
   const { isEligibleForRewards } = useRewardContext();
 
-  const prevIsEligibleForRewards = useRef<boolean>();
+  const prevIsEligibleForRewards = useRef<boolean | undefined>(undefined);
 
   // Notify the user when the agent earns rewards
   const handleAgentEarned = useCallback(() => {

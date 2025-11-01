@@ -11,6 +11,7 @@ import {
   ServiceStakingDetails,
   StakingContractDetails,
   StakingRewardsInfo,
+  StakingState,
 } from '@/types/Autonolas';
 
 import {
@@ -55,7 +56,7 @@ export abstract class SupafundService extends StakedAgentService {
     if (!agentMultisigAddress) return;
     if (!serviceId) return;
 
-    const stakingProgramConfig = STAKING_PROGRAMS[chainId][stakingProgramId];
+    const stakingProgramConfig = STAKING_PROGRAMS[chainId]?.[stakingProgramId];
 
     if (!stakingProgramConfig) throw new Error('Staking program not found');
 
@@ -366,7 +367,10 @@ export abstract class SupafundService extends StakedAgentService {
       console.log('✅ Service restarted successfully');
     } catch (error) {
       console.error('❌ Service restart failed:', error);
-      throw new Error(`Failed to restart service: ${error.message}`);
+      if (error instanceof Error) {
+        throw new Error(`Failed to restart service: ${error.message}`);
+      }
+      throw new Error('Failed to restart service');
     }
   };
 
@@ -374,7 +378,8 @@ export abstract class SupafundService extends StakedAgentService {
     stakingProgramId: StakingProgramId,
     chainId: EvmChainId = EvmChainId.Gnosis,
   ): Promise<bigint | undefined> => {
-    const stakingProgramConfig = STAKING_PROGRAMS[chainId][stakingProgramId];
+    const stakingProgramConfig =
+      STAKING_PROGRAMS[chainId]?.[stakingProgramId];
     if (!stakingProgramConfig) return undefined;
 
     const { contract: stakingTokenProxyContract } = stakingProgramConfig;
@@ -403,7 +408,8 @@ export abstract class SupafundService extends StakedAgentService {
     stakingProgramId: StakingProgramId,
     chainId: EvmChainId = EvmChainId.Gnosis,
   ): Promise<ServiceStakingDetails> => {
-    const stakingProgramConfig = STAKING_PROGRAMS[chainId][stakingProgramId];
+    const stakingProgramConfig =
+      STAKING_PROGRAMS[chainId]?.[stakingProgramId];
     if (!stakingProgramConfig) throw new Error('Staking program not found');
 
     const { contract: stakingTokenProxyContract } = stakingProgramConfig;
@@ -413,6 +419,12 @@ export abstract class SupafundService extends StakedAgentService {
       stakingTokenProxyContract.getServiceInfo(serviceNftTokenId),
       stakingTokenProxyContract.minStakingDeposit(),
     ]);
+
+    const serviceStakingStartTime = Number(
+      typeof serviceInfo[3]?.toNumber === 'function'
+        ? serviceInfo[3].toNumber()
+        : serviceInfo[3] ?? 0,
+    );
 
     return {
       serviceId: serviceNftTokenId,
@@ -424,6 +436,8 @@ export abstract class SupafundService extends StakedAgentService {
       reward: serviceInfo[4],
       inactivity: serviceInfo[5],
       minStakingDeposit: Number(formatEther(minStakingDeposit)),
+      serviceStakingStartTime,
+      serviceStakingState: StakingState.NotStaked,
     };
   };
 
@@ -431,7 +445,8 @@ export abstract class SupafundService extends StakedAgentService {
     stakingProgramId: StakingProgramId,
     chainId: EvmChainId,
   ): Promise<StakingContractDetails> => {
-    const stakingProgramConfig = STAKING_PROGRAMS[chainId][stakingProgramId];
+    const stakingProgramConfig =
+      STAKING_PROGRAMS[chainId]?.[stakingProgramId];
     if (!stakingProgramConfig) throw new Error('Staking program not found');
 
     const { contract: stakingTokenProxyContract, activityChecker } = stakingProgramConfig;
@@ -455,8 +470,15 @@ export abstract class SupafundService extends StakedAgentService {
 
     // Calculate rewards per work period (assuming work period is livenessPeriod)
     const yearlyRewards = ethers.BigNumber.from(rewardsPerSecond).mul(ONE_YEAR);
+    const livenessPeriodSeconds =
+      typeof livenessPeriod?.toNumber === 'function'
+        ? livenessPeriod.toNumber()
+        : Number(livenessPeriod ?? 0);
     const availableRewards = Number(formatEther(yearlyRewards));
-    const rewardsPerWorkPeriod = availableRewards / (ONE_YEAR / livenessPeriod);
+    const rewardsPerWorkPeriod =
+      livenessPeriodSeconds > 0
+        ? availableRewards / (ONE_YEAR / livenessPeriodSeconds)
+        : 0;
     
     // Calculate APY (simplified calculation based on minimum stake)
     const minimumStake = Number(formatEther(minStakingDeposit));
@@ -466,11 +488,12 @@ export abstract class SupafundService extends StakedAgentService {
       availableRewards,
       maxNumServices,
       serviceIds: serviceIds || [],
-      minimumStakingDuration: livenessPeriod,
+      minimumStakingDuration: livenessPeriodSeconds,
       minStakingDeposit: minimumStake,
       apy: Math.round(apy * 100) / 100, // Round to 2 decimal places
       olasStakeRequired: minimumStake,
       rewardsPerWorkPeriod: Math.round(rewardsPerWorkPeriod * 100) / 100,
+      epochCounter: 0,
     };
   };
 

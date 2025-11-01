@@ -86,13 +86,13 @@ export const useMigrate = (migrateToStakingProgramId: StakingProgramId) => {
     );
   }, [homeChainId, isBalanceLoaded, masterSafeBalances]);
 
-  const minimumOlasRequiredToMigrate = useMemo(
-    () =>
-      STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId][
+  const minimumOlasRequiredToMigrate = useMemo(() => {
+    const stakingProgram =
+      STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId]?.[
         migrateToStakingProgramId
-      ]?.stakingRequirements[TokenSymbol.OLAS],
-    [selectedAgentConfig.evmHomeChainId, migrateToStakingProgramId],
-  );
+      ];
+    return stakingProgram?.stakingRequirements[TokenSymbol.OLAS];
+  }, [selectedAgentConfig.evmHomeChainId, migrateToStakingProgramId]);
 
   const hasEnoughOlasToMigrate = useMemo(() => {
     if (!isBalanceLoaded) return false;
@@ -202,8 +202,16 @@ export const useMigrate = (migrateToStakingProgramId: StakingProgramId) => {
 
     // user is staked from hereon
 
-    const { deprecated: isDeprecated, agentsSupported } =
-      STAKING_PROGRAMS[homeChainId][migrateToStakingProgramId];
+    const targetProgram =
+      STAKING_PROGRAMS[homeChainId]?.[migrateToStakingProgramId];
+    if (!targetProgram) {
+      return {
+        canMigrate: false,
+        reason: CantMigrateReason.MigrationNotSupported,
+      };
+    }
+
+    const { deprecated: isDeprecated, agentsSupported } = targetProgram;
 
     if (isDeprecated || !agentsSupported.includes(selectedAgentType)) {
       return {

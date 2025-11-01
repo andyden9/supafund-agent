@@ -12,6 +12,7 @@ export type ElectronStore = {
   environmentName?: string;
   lastSelectedAgentType?: AgentType;
   knownVersion?: string;
+  [key: string]: unknown;
 
   // First time user settings
   firstStakingRewardAchieved?: boolean;
@@ -19,14 +20,6 @@ export type ElectronStore = {
   agentEvictionAlertShown?: boolean;
 
   // Each agent has its own settings
-  [AgentType.PredictTrader]?: AgentSettings;
-  [AgentType.AgentsFun]?: AgentSettings;
-  [AgentType.Modius]?: AgentSettings & {
-    isProfileWarningDisplayed: boolean;
-  };
-  [AgentType.Optimus]?: AgentSettings & {
-    isProfileWarningDisplayed: boolean;
-  };
   [AgentType.Supafund]?: AgentSettings;
   lastProvidedBackupWallet?: {
     address: Nullable<string>;

@@ -7,11 +7,10 @@ export const BACKEND_URL: Url = `http://localhost:${process.env.NODE_ENV === 'pr
 
 export const BACKEND_URL_V2: Url = `http://localhost:${process.env.NODE_ENV === 'production' ? 8765 : 8000}/api/v2`;
 
-// olas.network
-export const PEARL_URL: Url = 'https://olas.network/pearl';
-export const FAQ_URL: Url = 'https://olas.network/pearl#faq';
-export const TERMS_AND_CONDITIONS_URL: Url = 'https://olas.network/pearl-terms';
-export const DOWNLOAD_URL: Url = 'https://olas.network/pearl#update';
+export const SUPAFUND_URL: Url = 'https://www.supafund.xyz';
+export const FAQ_URL: Url = 'https://www.supafund.xyz/faq';
+export const TERMS_AND_CONDITIONS_URL: Url = 'https://www.supafund.xyz/terms';
+export const DOWNLOAD_URL: Url = 'https://www.supafund.xyz';
 
 // thegraph
 export const REWARDS_HISTORY_SUBGRAPH_URLS_BY_EVM_CHAIN: Record<
@@ -51,8 +50,8 @@ export const GEMINI_API_URL: string = 'https://aistudio.google.com/app/apikey';
 export const WEB3AUTH_URL: Url = 'https://web3auth.io';
 export const WEB3AUTH_TERMS_AND_CONDITIONS_URL: Url = `${WEB3AUTH_URL}/docs/legal/terms-and-conditions`;
 export const SAFE_URL: Url = 'https://safe.global/';
-export const PEARL_LICENSE: Url =
-  'https://github.com/valory-xyz/olas-operate-app/blob/main/LICENSE';
+export const SUPAFUND_LICENSE: Url =
+  'https://github.com/andyden9/supafund-agent/blob/main/LICENSE';
 
 // explorers @note DO NOT END WITH `/`
 const GNOSIS_EXPLORER_URL: Url = 'https://gnosisscan.io';
@@ -99,8 +98,7 @@ export const SWAP_URL_BY_EVM_CHAIN: Record<EvmChainId, Url> = {
 // on-ramp
 export const ON_RAMP_GATEWAY_URL = `https://on-ramp.${process.env.NODE_ENV === 'production' ? '' : 'staging.'}autonolas.tech/`;
 
-// pearl-api url
-export const PEARL_API_URL = 'https://pearl-api.olas.network';
+export const SUPAFUND_API_URL = 'https://api.supafund.xyz';
 
 // web3auth
-export const WEB3AUTH_GATEWAY_URL = `${PEARL_API_URL}/web3auth/login`;
+export const WEB3AUTH_GATEWAY_URL = `${SUPAFUND_API_URL}/web3auth/login`;

@@ -7,7 +7,7 @@ import { FireNoStreak } from '@/components/custom-icons/FireNoStreak';
 import { FireStreak } from '@/components/custom-icons/FireStreak';
 import { COLOR } from '@/constants/colors';
 import { NA } from '@/constants/symbols';
-import { PEARL_URL } from '@/constants/urls';
+import { SUPAFUND_URL } from '@/constants/urls';
 import { Pages } from '@/enums/Pages';
 import { useBalanceContext } from '@/hooks/useBalanceContext';
 import { usePageState } from '@/hooks/usePageState';
@@ -39,9 +39,11 @@ const Streak = () => {
 
   const onStreakShare = useCallback(() => {
     const encodedText = encodeURIComponent(
-      `🎉 I've just completed a ${optimisticStreak}-day streak with my agent on Pearl and earned OLAS every single day! 🏆 How long can you keep your streak going? \n\nDownload the Pearl app:`,
+      `🎉 我的 Supafund 代理已经连续 ${optimisticStreak} 天完成奖励！#olas`,
     );
-    const encodedURL = encodeURIComponent(`${PEARL_URL}?pearl=share-streak`);
+    const encodedURL = encodeURIComponent(
+      `${SUPAFUND_URL}?supafund=share-streak`,
+    );
 
     window.open(
       `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedURL}`,

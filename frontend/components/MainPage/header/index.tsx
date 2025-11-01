@@ -11,7 +11,6 @@ import { useServices } from '@/hooks/useServices';
 import { FirstRunModal } from '../modals/FirstRunModal';
 import { AgentButton } from './AgentButton/AgentButton';
 import { AgentHead } from './AgentHead';
-import { SwitchAgentButton } from './SwitchAgentButton';
 
 const useSetupTrayIcon = () => {
   const { isLowBalance } = useBalanceContext();
@@ -55,11 +54,6 @@ export const MainHeader = () => {
             open={isFirstRunModalOpen}
             onClose={handleModalClose}
           />
-        </Flex>
-
-        {/* Right: Compact action buttons */}
-        <Flex gap={6} align="center">
-          <SwitchAgentButton />
         </Flex>
       </Flex>
     </CardSection>

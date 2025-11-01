@@ -92,7 +92,10 @@ export const StakingContractSection = ({
     );
   }, [isActiveStakingProgramLoaded, migrateValidation]);
 
+  const stakingProgramMeta = allStakingProgramsMeta?.[stakingProgramId];
   const evmChainId = selectedAgentConfig.evmHomeChainId;
+  const stakingContractAddress =
+    STAKING_PROGRAM_ADDRESS[evmChainId]?.[stakingProgramId];
 
   return (
     <CardSection
@@ -106,16 +109,16 @@ export const StakingContractSection = ({
     >
       <Flex gap={12}>
         <Title level={5} className="m-0">
-          {allStakingProgramsMeta[stakingProgramId]?.name || 'Unknown'}
+          {stakingProgramMeta?.name || 'Unknown'}
         </Title>
         <StakingContractTag status={contractTagStatus} />
       </Flex>
 
       <StakingContractDetails stakingProgramId={stakingProgramId} />
 
-      {evmChainId && (
+      {evmChainId && stakingContractAddress && (
         <AddressLink
-          address={STAKING_PROGRAM_ADDRESS[evmChainId][stakingProgramId]}
+          address={stakingContractAddress}
           middlewareChain={selectedAgentConfig.middlewareHomeChainId}
           prefix="View contract details"
         />

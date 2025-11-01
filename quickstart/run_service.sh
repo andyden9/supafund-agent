@@ -89,5 +89,5 @@ fi
 
 # Install dependencies and run the agent througth the middleware
 poetry install --only main --no-cache
-poetry run pip install --upgrade packaging  # TODO: update packaging version from open-aea
+poetry run pip install "packaging==23.2"
 poetry run python -m operate.cli quickstart $@

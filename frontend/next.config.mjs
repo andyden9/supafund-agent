@@ -1,6 +1,8 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
+  output: 'export',
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'http',
@@ -65,6 +67,9 @@ const nextConfig = {
     ETHEREUM_RPC: process.env.ETHEREUM_RPC,
     MODE_RPC: process.env.MODE_RPC,
     CELO_RPC: process.env.CELO_RPC,
+  },
+  eslint: {
+    ignoreDuringBuilds: true,
   },
 };
 

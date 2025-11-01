@@ -117,7 +117,7 @@ const useServiceDeployment = () => {
     isServiceRunning,
     isAllStakingContractDetailsRecordLoaded,
     selectedAgentConfig.isUnderConstruction,
-    selectedAgentConfig.name,
+    selectedAgentConfig.hasExternalFunds,
     selectedStakingProgramMeta?.deprecated,
     hasEnoughServiceSlots,
     isServiceStaked,
@@ -168,14 +168,17 @@ const useServiceDeployment = () => {
     let middlewareServiceResponse;
     if (!service) {
       try {
+        const stakingProgramConfig =
+          STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId]?.[
+            selectedStakingProgramId
+          ];
+
         middlewareServiceResponse = await ServicesService.createService({
           stakingProgramId: selectedStakingProgramId,
           serviceTemplate,
           deploy: false, // TODO: deprecated will remove
           useMechMarketplace:
-            STAKING_PROGRAMS[selectedAgentConfig.evmHomeChainId][
-              selectedStakingProgramId
-            ].mechType === MechType.Marketplace,
+            stakingProgramConfig?.mechType === MechType.Marketplace,
         });
       } catch (error) {
         console.error('Failed to create service:', error);

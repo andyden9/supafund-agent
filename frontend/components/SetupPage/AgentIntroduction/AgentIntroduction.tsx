@@ -1,20 +1,12 @@
 import { Divider, Flex, Typography } from 'antd';
 import { useCallback, useMemo } from 'react';
 
-import { Pages } from '@/enums/Pages';
 import { SetupScreen } from '@/enums/SetupScreen';
-import { usePageState } from '@/hooks/usePageState';
 import { useServices } from '@/hooks/useServices';
 import { useSetup } from '@/hooks/useSetup';
 import { useSharedContext } from '@/hooks/useSharedContext';
 
-import {
-  AGENTS_FUND_ONBOARDING_STEPS,
-  MODIUS_ONBOARDING_STEPS,
-  OPTIMUS_ONBOARDING_STEPS,
-  PREDICTION_ONBOARDING_STEPS,
-  SUPAFUND_ONBOARDING_STEPS,
-} from './constants';
+import { SUPAFUND_ONBOARDING_STEPS } from './constants';
 import { IntroductionStep, OnboardingStep } from './IntroductionStep';
 
 const { Text } = Typography;
@@ -30,7 +22,6 @@ const Introduction = ({
   onOnboardingComplete,
   isUnderConstruction,
 }: IntroductionProps) => {
-  const { goto } = useSetup();
   const { onboardingStep, updateOnboardingStep } = useSharedContext();
 
   const onNextStep = useCallback(() => {
@@ -48,11 +39,11 @@ const Introduction = ({
 
   const onPreviousStep = useCallback(() => {
     if (onboardingStep === 0) {
-      goto(SetupScreen.AgentSelection);
+      return;
     } else {
       updateOnboardingStep(onboardingStep - 1);
     }
-  }, [onboardingStep, goto, updateOnboardingStep]);
+  }, [onboardingStep, updateOnboardingStep]);
 
   const buttonLabel = useMemo(() => {
     if (onboardingStep === steps.length - 1) {
@@ -79,43 +70,13 @@ const Introduction = ({
  */
 export const AgentIntroduction = () => {
   const { goto } = useSetup();
-  const { goto: gotoPage } = usePageState();
-  const { selectedAgentType, selectedAgentConfig } = useServices();
+  const { selectedAgentConfig } = useServices();
 
-  const introductionSteps = useMemo(() => {
-    if (selectedAgentType === 'trader') return PREDICTION_ONBOARDING_STEPS;
-    if (selectedAgentType === 'memeooorr') return AGENTS_FUND_ONBOARDING_STEPS;
-    if (selectedAgentType === 'modius') return MODIUS_ONBOARDING_STEPS;
-    if (selectedAgentType === 'optimus') return OPTIMUS_ONBOARDING_STEPS;
-    if (selectedAgentType === 'supafund') return SUPAFUND_ONBOARDING_STEPS;
-
-    throw new Error('Invalid agent type');
-  }, [selectedAgentType]);
+  const introductionSteps = useMemo(() => SUPAFUND_ONBOARDING_STEPS, []);
 
   const onComplete = useCallback(() => {
-    // if agent is "coming soon" should be redirected to EARLY ACCESS PAGE
-    if (selectedAgentConfig.isComingSoon) {
-      goto(SetupScreen.EarlyAccessOnly);
-      return;
-    }
-
-    // if agent is under construction, goes back to agent selection
-    if (selectedAgentConfig.isUnderConstruction) {
-      gotoPage(Pages.SwitchAgent);
-    }
-
-    // If the selected type requires setting up an agent,
-    // for Supafund we collect funding first, then show SetupYourAgent.
-    if (selectedAgentConfig.requiresSetup) {
-      if (selectedAgentType === 'supafund') {
-        goto(SetupScreen.SetupEoaFunding);
-      } else {
-        goto(SetupScreen.SetupYourAgent);
-      }
-    } else {
-      goto(SetupScreen.SetupEoaFunding);
-    }
-  }, [goto, gotoPage, selectedAgentConfig]);
+    goto(SetupScreen.SetupEoaFunding);
+  }, [goto]);
 
   return (
     <>

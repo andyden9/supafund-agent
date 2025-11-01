@@ -117,7 +117,7 @@ const useSetupNavigation = ({
     // If the agent is disabled then redirect to agent selection,
     // if the disabled agent was previously selected.
     if (!selectedAgentConfig.isAgentEnabled) {
-      goto(SetupScreen.AgentSelection);
+      goto(SetupScreen.AgentIntroduction);
       return;
     }
 
@@ -126,7 +126,7 @@ const useSetupNavigation = ({
       window.console.log(
         `No service created for chain ${selectedServiceOrAgentChainId}`,
       );
-      goto(SetupScreen.AgentSelection);
+      goto(SetupScreen.AgentIntroduction);
       return;
     }
 

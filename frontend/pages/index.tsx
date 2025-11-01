@@ -4,7 +4,6 @@ import { AddFundsToMasterSafeThroughBridge } from '@/components/AddFundsThroughB
 import { LowOperatingBalanceBridgeFunds } from '@/components/AddFundsThroughBridge/LowOperatingBalanceBridgeFunds';
 import { LowSafeSignerBalanceBridgeFunds } from '@/components/AddFundsThroughBridge/LowSafeSignerBalanceBridgeFunds';
 import { AgentActivityPage } from '@/components/AgentActivity';
-import { AgentSelection } from '@/components/AgentSelection';
 import { Main } from '@/components/MainPage';
 import { ManageStakingPage } from '@/components/ManageStakingPage';
 import { AddBackupWalletViaSafePage } from '@/components/Pages/AddBackupWalletViaSafePage';
@@ -14,12 +13,10 @@ import { Settings } from '@/components/SettingsPage';
 import { Setup } from '@/components/SetupPage';
 import { UpdateAgentPage } from '@/components/UpdateAgentPage';
 import { YourWalletPage } from '@/components/YourWalletPage';
-import { AgentType } from '@/enums/Agent';
 import { Pages } from '@/enums/Pages';
 import { useElectronApi } from '@/hooks/useElectronApi';
 import { useNeedsFunds } from '@/hooks/useNeedsFunds';
 import { usePageState } from '@/hooks/usePageState';
-import { useServices } from '@/hooks/useServices';
 import {
   SupafundConfiguration,
   SupafundDashboardPage,
@@ -37,7 +34,6 @@ export default function Home() {
     hasEnoughAdditionalTokensForInitialFunding,
     isInitialFunded,
   } = useNeedsFunds(undefined);
-  const { selectedAgentType } = useServices();
 
   useEffect(() => {
     // Only run on client side
@@ -65,38 +61,17 @@ export default function Home() {
   }, [electronApi]);
 
   useEffect(() => {
-    const baseFundingSatisfied =
-      hasEnoughNativeTokenForInitialFunding === true &&
-      hasEnoughOlasForInitialFunding === true;
     const supafundFundingSatisfied =
       hasEnoughNativeTokenForInitialFunding === true &&
       hasEnoughOlasForInitialFunding === true &&
       hasEnoughAdditionalTokensForInitialFunding === true;
 
-    const isSupafund = selectedAgentType === AgentType.Supafund;
-
-    if (isSupafund) {
-      // Only prevent dashboard access when initial funding requirements are not satisfied
-      if (
-        pageState === Pages.SupafundDashboard &&
-        !isInitialFunded &&
-        !supafundFundingSatisfied
-      ) {
-        goto(Pages.Main);
-      }
-      return;
-    }
-
-    // Non-Supafund minimal behavior
     if (
-      pageState === Pages.ManageStaking &&
-      !(baseFundingSatisfied || isInitialFunded)
+      pageState === Pages.SupafundDashboard &&
+      !isInitialFunded &&
+      !supafundFundingSatisfied
     ) {
       goto(Pages.Main);
-      return;
-    }
-    if (pageState === Pages.Main && (baseFundingSatisfied || isInitialFunded)) {
-      goto(Pages.ManageStaking);
     }
   }, [
     pageState,
@@ -105,7 +80,6 @@ export default function Home() {
     hasEnoughOlasForInitialFunding,
     hasEnoughAdditionalTokensForInitialFunding,
     isInitialFunded,
-    selectedAgentType,
   ]);
 
   const page = useMemo(() => {
@@ -114,8 +88,6 @@ export default function Home() {
         return <Setup />;
       case Pages.Main:
         return <Main />;
-      case Pages.SwitchAgent:
-        return <AgentSelection onPrev={() => goto(Pages.Main)} />;
       case Pages.Settings:
         return <Settings />;
       case Pages.HelpAndSupport:

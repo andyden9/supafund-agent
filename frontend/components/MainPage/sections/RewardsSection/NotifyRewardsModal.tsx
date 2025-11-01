@@ -3,7 +3,7 @@ import Image from 'next/image';
 import { useCallback, useEffect, useMemo, useRef, useState } from 'react';
 
 import { NA } from '@/constants/symbols';
-import { PEARL_URL } from '@/constants/urls';
+import { SUPAFUND_URL } from '@/constants/urls';
 import { useMainOlasBalance } from '@/context/SharedProvider/useMainOlasBalance';
 import { useElectronApi } from '@/hooks/useElectronApi';
 import { useRewardContext } from '@/hooks/useRewardContext';
@@ -17,7 +17,7 @@ const { Text, Title } = Typography;
 const getFormattedReward = (reward: number | undefined) =>
   reward === undefined ? NA : `~${balanceFormat(reward, 2)}`;
 
-const SHARE_TEXT = `I just earned my first reward through the Operate app powered by #olas!\n\nDownload the Pearl app:`;
+const SHARE_TEXT = `我刚刚在 Supafund 代理上拿到了第一笔奖励！🚀`;
 
 export const NotifyRewardsModal = () => {
   const { isEligibleForRewards, availableRewardsForEpochEth } =
@@ -26,7 +26,7 @@ export const NotifyRewardsModal = () => {
   const { showNotification, store } = useElectronApi();
   const { storeState } = useStore();
 
-  const firstRewardRef = useRef<number>();
+  const firstRewardRef = useRef<number | undefined>(undefined);
   const hasScheduledNotificationRef = useRef(false);
   const [canShowNotification, setCanShowNotification] = useState(false);
 
@@ -72,7 +72,9 @@ export const NotifyRewardsModal = () => {
 
   const onTwitterShare = useCallback(() => {
     const encodedText = encodeURIComponent(SHARE_TEXT);
-    const encodedURL = encodeURIComponent(`${PEARL_URL}?pearl=first-reward`);
+    const encodedURL = encodeURIComponent(
+      `${SUPAFUND_URL}?supafund=first-reward`,
+    );
 
     window.open(
       `https://twitter.com/intent/tweet?text=${encodedText}&url=${encodedURL}`,

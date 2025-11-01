@@ -4,7 +4,6 @@ import { useContext, useMemo } from 'react';
 import { SetupContext } from '@/context/SetupProvider';
 import { SetupScreen } from '@/enums/SetupScreen';
 
-import { AgentSelection } from '../AgentSelection';
 import { CardFlex } from '../styled/CardFlex';
 import { AgentIntroduction } from './AgentIntroduction/AgentIntroduction';
 import { SetupBackupSigner } from './Create/SetupBackupSigner';
@@ -55,8 +54,6 @@ export const Setup = () => {
         return <SetupEoaFunding />;
       case SetupScreen.SetupCreateSafe:
         return <SetupCreateSafe />;
-      case SetupScreen.AgentSelection:
-        return <AgentSelection showSelected={false} />;
       case SetupScreen.AgentIntroduction:
         return <AgentIntroduction />;
       case SetupScreen.EarlyAccessOnly:

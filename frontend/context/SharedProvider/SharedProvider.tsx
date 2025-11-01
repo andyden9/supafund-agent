@@ -2,13 +2,10 @@ import {
   createContext,
   PropsWithChildren,
   useCallback,
-  useEffect,
   useRef,
   useState,
 } from 'react';
 
-import { AgentType } from '@/enums/Agent';
-import { useServices } from '@/hooks/useServices';
 import { Optional } from '@/types/Util';
 
 import { useMainOlasBalance } from './useMainOlasBalance';
@@ -66,30 +63,7 @@ export const SharedProvider = ({ children }: PropsWithChildren) => {
   }, []);
 
   // agent specific checks
-  const { selectedAgentType, selectedService } = useServices();
-  const [isAgentsFunFieldUpdateRequired, setIsAgentsFunFieldUpdateRequired] =
-    useState(false);
-
-  // Users with the AgentsFun agent type are required to update their
-  // agent configurations to run the latest version of the agent.
-  useEffect(() => {
-    if (!selectedAgentType) return;
-    if (selectedAgentType !== AgentType.AgentsFun) {
-      setIsAgentsFunFieldUpdateRequired(false);
-      return;
-    }
-    if (!selectedService) return;
-
-    const areFieldsUpdated = [
-      'TWEEPY_CONSUMER_API_KEY',
-      'TWEEPY_CONSUMER_API_KEY_SECRET',
-      'TWEEPY_BEARER_TOKEN',
-      'TWEEPY_ACCESS_TOKEN',
-      'TWEEPY_ACCESS_TOKEN_SECRET',
-    ].every((key) => selectedService.env_variables?.[key]?.value);
-
-    setIsAgentsFunFieldUpdateRequired(!areFieldsUpdated);
-  }, [selectedAgentType, selectedService]);
+  const isAgentsFunFieldUpdateRequired = false;
 
   return (
     <SharedContext.Provider

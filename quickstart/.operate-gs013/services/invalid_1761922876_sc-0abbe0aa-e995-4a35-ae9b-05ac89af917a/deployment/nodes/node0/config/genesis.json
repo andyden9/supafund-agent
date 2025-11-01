@@ -1,0 +1,35 @@
+{
+  "genesis_time": "2025-10-31T13:56:13.852853Z",
+  "chain_id": "autonolas-123",
+  "initial_height": "0",
+  "consensus_params": {
+    "block": {
+      "max_bytes": "22020096",
+      "max_gas": "-1",
+      "time_iota_ms": "1000"
+    },
+    "evidence": {
+      "max_age_num_blocks": "100000",
+      "max_age_duration": "172800000000000",
+      "max_bytes": "1048576"
+    },
+    "validator": {
+      "pub_key_types": [
+        "ed25519"
+      ]
+    },
+    "version": {}
+  },
+  "validators": [
+    {
+      "address": "9719964F78663D14151C32E62DEBECCD12AB49BF",
+      "pub_key": {
+        "type": "tendermint/PubKeyEd25519",
+        "value": "at/yQ4yJqS4cCGedPCgfvZ5CW6ysSI817pfQI5BwOKE="
+      },
+      "power": "1",
+      "name": "node0"
+    }
+  ],
+  "app_hash": ""
+}

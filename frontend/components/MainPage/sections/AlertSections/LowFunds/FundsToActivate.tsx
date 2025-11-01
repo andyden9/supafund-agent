@@ -24,13 +24,9 @@ type FundsToActivateProps = {
   additionalFundsRequired?: boolean;
 };
 
-const FUNDS_REQUIRED_FOR_BY_AGENT_TYPE: { [key in AgentType]: string } = {
-  [AgentType.PredictTrader]: 'for trading',
-  [AgentType.AgentsFun]: 'for agent operations',
-  [AgentType.Modius]: 'for investment',
-  [AgentType.Optimus]: 'for investment',
+const FUNDS_REQUIRED_FOR_BY_AGENT_TYPE: Record<AgentType, string> = {
   [AgentType.Supafund]: 'for prediction market trading',
-} as const;
+};
 
 export const FundsToActivate = ({
   stakingFundsRequired = true,

@@ -1,10 +1,7 @@
 import { SupportedMiddlewareChain } from '@/client';
 import { EvmChainId } from '@/enums/Chain';
 import { TokenSymbol } from '@/enums/Token';
-import { AgentsFunBaseService } from '@/service/agents/AgentsFunBase';
-import { ModiusService } from '@/service/agents/Modius';
-import { OptimismService } from '@/service/agents/Optimism';
-import { PredictTraderService } from '@/service/agents/PredictTrader';
+import { SupafundService } from '@/service/agents/Supafund';
 
 export type AgentConfig = {
   name: string;
@@ -15,11 +12,7 @@ export type AgentConfig = {
   additionalRequirements?: Partial<
     Record<EvmChainId, Partial<Record<TokenSymbol, number>>>
   >;
-  serviceApi:
-    | typeof PredictTraderService
-    | typeof ModiusService
-    | typeof OptimismService
-    | typeof AgentsFunBaseService;
+  serviceApi: typeof SupafundService;
   displayName: string;
   description: string;
   /** Adds under construction tab above card */

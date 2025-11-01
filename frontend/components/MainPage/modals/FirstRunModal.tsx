@@ -20,10 +20,10 @@ export const FirstRunModal: FC<FirstRunModalProps> = ({ open, onClose }) => {
   if (!open) return null;
   if (!activeStakingProgramId) return null;
 
+  const stakingProgramConfig =
+    STAKING_PROGRAMS[homeChainId]?.[activeStakingProgramId];
   const requiredStakedOlas =
-    STAKING_PROGRAMS[homeChainId][activeStakingProgramId]?.stakingRequirements[
-      TokenSymbol.OLAS
-    ];
+    stakingProgramConfig?.stakingRequirements?.[TokenSymbol.OLAS] ?? 0;
 
   return (
     <Modal
@@ -56,9 +56,7 @@ export const FirstRunModal: FC<FirstRunModalProps> = ({ open, onClose }) => {
       </Title>
       <Paragraph>Your agent is working towards earning rewards.</Paragraph>
       <Paragraph>
-        Pearl is designed to make it easy for you to earn staking rewards every
-        day. Simply leave the app and agent running in the background for ~1hr a
-        day.
+        Supafund 会在后台自动执行预测策略，保持在线即可持续参与质押并领取奖励。
       </Paragraph>
     </Modal>
   );

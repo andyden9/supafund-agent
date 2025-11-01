@@ -61,7 +61,7 @@ type UseContractCheckpointsOptions = {
 
 const fetchRewardsQuery = (chainId: EvmChainId) => {
   const supportedStakingContracts = Object.values(
-    STAKING_PROGRAM_ADDRESS[chainId],
+    STAKING_PROGRAM_ADDRESS[chainId] ?? {},
   ).map((address) => `"${address}"`);
 
   return gql`
@@ -331,7 +331,9 @@ export const useRewardsHistory = () => {
       addresses.add(address.toLowerCase());
     };
 
-    addAddressForProgram(selectedStakingProgramId);
+    if (selectedStakingProgramId) {
+      addAddressForProgram(selectedStakingProgramId);
+    }
     serviceStakingProgramIds.forEach(addAddressForProgram);
 
     return addresses;

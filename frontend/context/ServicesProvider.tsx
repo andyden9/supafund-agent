@@ -84,8 +84,8 @@ export const ServicesContext = createContext<ServicesContextType>({
   setPaused: noop,
   togglePaused: noop,
   isSelectedServiceDeploymentStatusLoading: true,
-  selectedAgentConfig: AGENT_CONFIG[AgentType.PredictTrader],
-  selectedAgentType: AgentType.PredictTrader,
+  selectedAgentConfig: AGENT_CONFIG[AgentType.Supafund],
+  selectedAgentType: AgentType.Supafund,
   deploymentDetails: undefined,
   updateAgentType: noop,
   overrideSelectedServiceStatus: noop,
@@ -108,7 +108,7 @@ export const ServicesProvider = ({ children }: PropsWithChildren) => {
 
   // set the agent type from the store on load
   const selectedAgentType = useMemo(() => {
-    if (!agentTypeFromStore) return AgentType.PredictTrader;
+    if (!agentTypeFromStore) return AgentType.Supafund;
     return agentTypeFromStore;
   }, [agentTypeFromStore]);
 

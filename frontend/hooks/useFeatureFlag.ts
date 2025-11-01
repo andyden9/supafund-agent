@@ -31,58 +31,6 @@ const FeaturesConfigSchema = z.record(
  * if false - the feature is disabled
  */
 const FEATURES_CONFIG = FeaturesConfigSchema.parse({
-  [AgentType.PredictTrader]: {
-    'manage-wallet': true,
-    'withdraw-funds': true,
-    'last-transactions': true,
-    'rewards-streak': true,
-    'staking-contract-section': true,
-    'agent-activity': true,
-    'backup-via-safe': true,
-    'agent-settings': true,
-    'bridge-onboarding': true,
-    'bridge-add-funds': true,
-    'on-ramp': true,
-  },
-  [AgentType.AgentsFun]: {
-    'manage-wallet': true,
-    'withdraw-funds': true,
-    'last-transactions': true,
-    'rewards-streak': true,
-    'staking-contract-section': true,
-    'agent-activity': true,
-    'backup-via-safe': true,
-    'agent-settings': true,
-    'bridge-onboarding': true,
-    'bridge-add-funds': false,
-    'on-ramp': false,
-  },
-  [AgentType.Modius]: {
-    'manage-wallet': true,
-    'withdraw-funds': true,
-    'last-transactions': true,
-    'rewards-streak': true,
-    'staking-contract-section': true,
-    'agent-activity': true,
-    'backup-via-safe': false, // temporarily hidden until mode is available on safe https://app.safe.global/new-safe/create
-    'agent-settings': true,
-    'bridge-onboarding': true,
-    'bridge-add-funds': true,
-    'on-ramp': true,
-  },
-  [AgentType.Optimus]: {
-    'manage-wallet': true,
-    'withdraw-funds': true,
-    'last-transactions': true,
-    'rewards-streak': true,
-    'staking-contract-section': true,
-    'agent-activity': true,
-    'backup-via-safe': true,
-    'agent-settings': true,
-    'bridge-onboarding': true,
-    'bridge-add-funds': true,
-    'on-ramp': true,
-  },
   [AgentType.Supafund]: {
     'manage-wallet': true,
     'withdraw-funds': true,
@@ -94,6 +42,7 @@ const FEATURES_CONFIG = FeaturesConfigSchema.parse({
     'agent-settings': false,
     'bridge-onboarding': true,
     'bridge-add-funds': true,
+    'on-ramp': false,
   },
 });
 

@@ -72,7 +72,7 @@ export abstract class StakedAgentService {
 
       // filter out staking programs that are not on the chain
       const stakingProgramEntries = Object.entries(
-        STAKING_PROGRAMS[evmChainId],
+        STAKING_PROGRAMS[evmChainId] ?? {},
       ).filter((entry) => {
         const [, program] = entry;
         return program.chainId === evmChainId;
@@ -172,7 +172,7 @@ export abstract class StakedAgentService {
     chainId: EvmChainId,
     contractAddress: Address,
   ): Nullable<StakingProgramId> => {
-    const addresses = STAKING_PROGRAM_ADDRESS[chainId];
+    const addresses = STAKING_PROGRAM_ADDRESS[chainId] ?? {};
     const entries = Object.entries(addresses) as [StakingProgramId, Address][];
     const foundEntry = entries.find(
       ([, address]) => address.toLowerCase() === contractAddress.toLowerCase(),
