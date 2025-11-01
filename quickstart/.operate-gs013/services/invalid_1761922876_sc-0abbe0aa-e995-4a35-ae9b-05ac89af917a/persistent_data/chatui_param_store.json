@@ -1,5 +1,0 @@
-{
-    "trading_strategy": "bet_amount_per_threshold",
-    "initial_trading_strategy": "bet_amount_per_threshold",
-    "mech_tool": null
-}
