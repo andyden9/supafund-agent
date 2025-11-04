@@ -4,7 +4,7 @@
  * This module contains all Supafund-specific UI components, hooks, and utilities.
  * It is completely isolated from other agents to prevent coupling.
  *
- * The service layer (SupafundService) remains in @/service/agents/Supafund.ts
+ * The service layer (SupafundService) remains in @/supafund/core/services/agents/Supafund.ts
  * and continues to inherit from StakedAgentService for shared blockchain logic.
  */
 

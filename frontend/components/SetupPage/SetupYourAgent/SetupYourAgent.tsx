@@ -8,6 +8,7 @@ import { AgentType } from '@/enums/Agent';
 import { SetupScreen } from '@/enums/SetupScreen';
 import { useServices } from '@/hooks/useServices';
 import { SupafundAgentForm } from '@/supafund/components/sections/SetupForm/SupafundAgentForm';
+import { ServiceTemplate as SupafundServiceTemplate } from '@/supafund/core/client';
 import { LOCAL_FORM_THEME } from '@/theme';
 
 import { SetupCreateHeader } from '../Create/SetupCreateHeader';
@@ -56,7 +57,11 @@ export const SetupYourAgent = () => {
           <OptimusAgentForm serviceTemplate={serviceTemplate} />
         )}
         {selectedAgentType === AgentType.Supafund && (
-          <SupafundAgentForm serviceTemplate={serviceTemplate} />
+          <SupafundAgentForm
+            serviceTemplate={
+              serviceTemplate as unknown as SupafundServiceTemplate
+            }
+          />
         )}
       </CardFlex>
     </ConfigProvider>

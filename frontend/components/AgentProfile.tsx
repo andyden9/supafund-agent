@@ -27,6 +27,8 @@ const AgentProfileButton = ({
   onClick,
   renderContainer,
 }: AgentProfileButtonProps) => {
+  const { selectedAgentConfig } = useServices();
+
   if (renderContainer) {
     return renderContainer({ onClick });
   }

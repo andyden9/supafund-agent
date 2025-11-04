@@ -115,7 +115,7 @@ export const AgentIntroduction = () => {
     } else {
       goto(SetupScreen.SetupEoaFunding);
     }
-  }, [goto, gotoPage, selectedAgentConfig]);
+  }, [goto, gotoPage, selectedAgentConfig, selectedAgentType]);
 
   return (
     <>

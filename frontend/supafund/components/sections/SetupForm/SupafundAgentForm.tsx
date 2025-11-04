@@ -15,12 +15,12 @@ import {
 } from 'antd';
 import React, { useCallback, useState } from 'react';
 
-import { ServiceTemplate } from '@/client';
-import { FormFlex } from '@/components/styled/FormFlex';
-import { SetupScreen } from '@/enums/SetupScreen';
-import { useSetup } from '@/hooks/useSetup';
-import { usePageState } from '@/hooks/usePageState';
-import { Pages } from '@/enums/Pages';
+import { ServiceTemplate } from '@/supafund/core/client';
+import { FormFlex } from '@/supafund/ui/components/styled/FormFlex';
+import { SetupScreen } from '@/supafund/core/enums/SetupScreen';
+import { useSetup } from '@/supafund/core/hooks/useSetup';
+import { usePageState } from '@/supafund/core/hooks/usePageState';
+import { Pages } from '@/supafund/core/enums/Pages';
 
 const { Text, Title } = Typography;
 

@@ -2,20 +2,20 @@ import { ArrowLeftOutlined } from '@ant-design/icons';
 import { Button, Card, Flex, Tooltip, Typography } from 'antd';
 import { useEffect, useMemo, useState } from 'react';
 
-import { AddFundsSection } from '@/components/MainPage/sections/AddFundsSection';
-import { AlertSections } from '@/components/MainPage/sections/AlertSections';
-import { GasBalanceSection } from '@/components/MainPage/sections/GasBalanceSection';
-import { MainOlasBalance } from '@/components/MainPage/sections/OlasBalanceSection';
-import { RewardsSection } from '@/components/MainPage/sections/RewardsSection';
-import { StakingContractSection } from '@/components/MainPage/sections/StakingContractUpdate';
-import { CardFlex } from '@/components/styled/CardFlex';
-import { Pages } from '@/enums/Pages';
-import { SetupScreen } from '@/enums/SetupScreen';
-import { useFeatureFlag } from '@/hooks/useFeatureFlag';
-import { useNeedsFunds } from '@/hooks/useNeedsFunds';
-import { usePageState } from '@/hooks/usePageState';
-import { useSetup } from '@/hooks/useSetup';
-import { useStakingProgram } from '@/hooks/useStakingProgram';
+import { AddFundsSection } from '@/supafund/ui/components/MainPage/sections/AddFundsSection';
+import { AlertSections } from '@/supafund/ui/components/MainPage/sections/AlertSections';
+import { GasBalanceSection } from '@/supafund/ui/components/MainPage/sections/GasBalanceSection';
+import { MainOlasBalance } from '@/supafund/ui/components/MainPage/sections/OlasBalanceSection';
+import { RewardsSection } from '@/supafund/ui/components/MainPage/sections/RewardsSection';
+import { StakingContractSection } from '@/supafund/ui/components/MainPage/sections/StakingContractUpdate';
+import { CardFlex } from '@/supafund/ui/components/styled/CardFlex';
+import { Pages } from '@/supafund/core/enums/Pages';
+import { SetupScreen } from '@/supafund/core/enums/SetupScreen';
+import { useFeatureFlag } from '@/supafund/core/hooks/useFeatureFlag';
+import { useNeedsFunds } from '@/supafund/core/hooks/useNeedsFunds';
+import { usePageState } from '@/supafund/core/hooks/usePageState';
+import { useSetup } from '@/supafund/core/hooks/useSetup';
+import { useStakingProgram } from '@/supafund/core/hooks/useStakingProgram';
 
 const { Title } = Typography;
 

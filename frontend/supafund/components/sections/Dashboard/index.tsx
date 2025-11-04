@@ -2,14 +2,14 @@ import { ArrowLeftOutlined } from '@ant-design/icons';
 import { Button, Card, Empty, Spin, Tabs, Typography } from 'antd';
 import { useMemo } from 'react';
 
-import { MiddlewareDeploymentStatus } from '@/client';
-import { GoToMainPageButton } from '@/components/Pages/GoToMainPageButton';
-import { CardFlex } from '@/components/styled/CardFlex';
-import { AgentType } from '@/enums/Agent';
-import { Pages } from '@/enums/Pages';
-import { usePageState } from '@/hooks/usePageState';
-import { useService } from '@/hooks/useService';
-import { useServices } from '@/hooks/useServices';
+import { MiddlewareDeploymentStatus } from '@/supafund/core/client';
+import { GoToMainPageButton } from '@/supafund/ui/components/Pages/GoToMainPageButton';
+import { CardFlex } from '@/supafund/ui/components/styled/CardFlex';
+import { AgentType } from '@/supafund/core/enums/Agent';
+import { Pages } from '@/supafund/core/enums/Pages';
+import { usePageState } from '@/supafund/core/hooks/usePageState';
+import { useService } from '@/supafund/core/hooks/useService';
+import { useServices } from '@/supafund/core/hooks/useServices';
 import { useSupafundData } from '@/supafund/hooks/useSupafundData';
 
 import { ActivityTab } from './components/ActivityTab';

@@ -26,7 +26,7 @@ export const NotifyRewardsModal = () => {
   const { showNotification, store } = useElectronApi();
   const { storeState } = useStore();
 
-  const firstRewardRef = useRef<number>();
+  const firstRewardRef = useRef<number | undefined>(undefined);
   const hasScheduledNotificationRef = useRef(false);
   const [canShowNotification, setCanShowNotification] = useState(false);
 

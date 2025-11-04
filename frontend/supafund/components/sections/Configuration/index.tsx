@@ -13,13 +13,13 @@ import {
 } from 'antd';
 import React, { useCallback, useEffect, useState } from 'react';
 
-import { CardFlex } from '@/components/styled/CardFlex';
-import { MiddlewareDeploymentStatus } from '@/client';
-import { AgentType } from '@/enums/Agent';
-import { Pages } from '@/enums/Pages';
-import { usePageState } from '@/hooks/usePageState';
-import { useServices } from '@/hooks/useServices';
-import { SupafundService } from '@/service/agents/Supafund';
+import { CardFlex } from '@/supafund/ui/components/styled/CardFlex';
+import { MiddlewareDeploymentStatus } from '@/supafund/core/client';
+import { AgentType } from '@/supafund/core/enums/Agent';
+import { Pages } from '@/supafund/core/enums/Pages';
+import { usePageState } from '@/supafund/core/hooks/usePageState';
+import { useServices } from '@/supafund/core/hooks/useServices';
+import { SupafundService } from '@/supafund/core/services/agents/Supafund';
 
 import { PresetSelector } from './components/PresetSelector';
 
@@ -139,7 +139,12 @@ export const SupafundConfiguration = () => {
           console.error('Restart error:', restartError);
           
           // More detailed error message
-          const errorMsg = restartError.message || 'Unknown error';
+          const errorMsg =
+            restartError instanceof Error
+              ? restartError.message
+              : typeof restartError === 'string'
+                ? restartError
+                : 'Unknown error';
           if (errorMsg.includes('500')) {
             message.error({
               content:

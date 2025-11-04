@@ -5,7 +5,7 @@
  * for when the app is running in a browser instead of Electron.
  */
 
-import { ElectronStore } from '@/types/ElectronApi';
+import { ElectronStore } from '@/supafund/core/types/ElectronApi';
 
 const STORE_KEY_PREFIX = 'pearl_store_';
 
@@ -17,7 +17,7 @@ export const browserStore = {
    * Get the entire store as an object
    */
   store: async (): Promise<ElectronStore> => {
-    const store: ElectronStore = {};
+    const store = {} as ElectronStore & Record<string, unknown>;
 
     // Iterate through all localStorage keys with our prefix
     for (let i = 0; i < localStorage.length; i++) {

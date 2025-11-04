@@ -1,5 +1,3 @@
-import { Web3AuthIframe } from '@/components/Web3AuthIframe/Web3AuthIframe';
+import Web3AuthPage from '@/supafund/ui/pages/web3auth';
 
-export default function Web3Auth() {
-  return <Web3AuthIframe />;
-}
+export default Web3AuthPage;

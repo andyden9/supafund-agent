@@ -324,7 +324,9 @@ export const useRewardsHistory = () => {
   const fallbackContracts = useMemo(() => {
     const addresses = new Set<string>();
 
-    const addAddressForProgram = (programId?: StakingProgramId) => {
+    const addAddressForProgram = (
+      programId: StakingProgramId | null | undefined,
+    ) => {
       if (!programId) return;
       const address = STAKING_PROGRAM_ADDRESS[homeChainId]?.[programId];
       if (!address) return;

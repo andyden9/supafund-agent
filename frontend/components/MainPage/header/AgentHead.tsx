@@ -38,21 +38,39 @@ const DeployedAgentHead = ({ isSupafund }: { isSupafund: boolean }) => {
   const [lottieView, setLottieView] = useState<React.ReactNode>(null);
 
   useEffect(() => {
-    setIsMounted(true);
-    // Only import and use lottie on client side
-    import('lottie-react').then(({ useLottie }) => {
-      const animationData = require('../../ui/animations/robot-running.json');
-      // This is a hack but necessary for client-side only rendering
-      const LottieComponent = () => {
-        const { View } = useLottie({
-          animationData,
-          loop: true,
-          autoplay: true,
-        });
-        return View;
-      };
-      setLottieView(<LottieComponent />);
-    });
+    let isActive = true;
+
+    const loadAnimation = async () => {
+      setIsMounted(true);
+      try {
+        const [{ useLottie }, animationModule] = await Promise.all([
+          import('lottie-react'),
+          import('../../ui/animations/robot-running.json'),
+        ]);
+        const animationData = animationModule.default;
+
+        const LottieComponent = () => {
+          const { View } = useLottie({
+            animationData,
+            loop: true,
+            autoplay: true,
+          });
+          return View;
+        };
+
+        if (isActive) {
+          setLottieView(<LottieComponent />);
+        }
+      } catch (error) {
+        console.error('Failed to load running robot animation', error);
+      }
+    };
+
+    loadAnimation();
+
+    return () => {
+      isActive = false;
+    };
   }, []);
 
   if (!isMounted || !lottieView) {

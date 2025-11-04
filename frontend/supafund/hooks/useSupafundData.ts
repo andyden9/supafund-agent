@@ -1,9 +1,9 @@
 import { useCallback, useEffect, useState } from 'react';
 
-import { EvmChainId } from '@/enums/Chain';
-import { WalletType } from '@/enums/Wallet';
-import { useServices } from '@/hooks/useServices';
-import { useMasterWalletContext } from '@/hooks/useWallet';
+import { EvmChainId } from '@/supafund/core/enums/Chain';
+import { WalletType } from '@/supafund/core/enums/Wallet';
+import { useServices } from '@/supafund/core/hooks/useServices';
+import { useMasterWalletContext } from '@/supafund/core/hooks/useWallet';
 import {
   calculateMetricsFromTrades,
   processMarketOpportunities,

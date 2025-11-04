@@ -366,7 +366,9 @@ export abstract class SupafundService extends StakedAgentService {
       console.log('✅ Service restarted successfully');
     } catch (error) {
       console.error('❌ Service restart failed:', error);
-      throw new Error(`Failed to restart service: ${error.message}`);
+      const message =
+        error instanceof Error ? error.message : String(error ?? 'unknown');
+      throw new Error(`Failed to restart service: ${message}`);
     }
   };
 
@@ -409,21 +411,20 @@ export abstract class SupafundService extends StakedAgentService {
     const { contract: stakingTokenProxyContract } = stakingProgramConfig;
     const provider = PROVIDERS[chainId].multicallProvider;
 
-    const [serviceInfo, minStakingDeposit] = await provider.all([
+    const [serviceInfo, serviceStakingState] = await provider.all([
       stakingTokenProxyContract.getServiceInfo(serviceNftTokenId),
-      stakingTokenProxyContract.minStakingDeposit(),
+      stakingTokenProxyContract.getStakingState(serviceNftTokenId),
     ]);
 
+    const tsStartValue =
+      (serviceInfo?.tsStart as { toNumber?: () => number } | undefined)
+        ?.toNumber?.() ??
+      (Array.isArray(serviceInfo) ? Number(serviceInfo[3]) : 0) ??
+      0;
+
     return {
-      serviceId: serviceNftTokenId,
-      stakingProgramId,
-      multisig: serviceInfo[0],
-      owner: serviceInfo[1],
-      nonces: serviceInfo[2],
-      tsStart: serviceInfo[3],
-      reward: serviceInfo[4],
-      inactivity: serviceInfo[5],
-      minStakingDeposit: Number(formatEther(minStakingDeposit)),
+      serviceStakingStartTime: tsStartValue,
+      serviceStakingState,
     };
   };
 
@@ -444,6 +445,7 @@ export abstract class SupafundService extends StakedAgentService {
       livenessPeriod,
       livenessRatio,
       serviceIds,
+      epochCounter,
     ] = await provider.all([
       stakingTokenProxyContract.minStakingDeposit(),
       stakingTokenProxyContract.rewardsPerSecond(),
@@ -451,26 +453,49 @@ export abstract class SupafundService extends StakedAgentService {
       stakingTokenProxyContract.livenessPeriod(),
       activityChecker.livenessRatio(),
       stakingTokenProxyContract.getServiceIds(),
+      stakingTokenProxyContract.epochCounter(),
     ]);
+
+    const minStakingDepositNumber = Number(formatEther(minStakingDeposit));
+    const livenessPeriodNumber = Number(livenessPeriod);
+    const maxNumServicesNumber = Number(maxNumServices);
+    const epochCounterNumber =
+      typeof epochCounter === 'number'
+        ? epochCounter
+        : Number(
+            (epochCounter as unknown as { toNumber?: () => number })?.toNumber?.() ??
+              epochCounter ??
+              0,
+          );
 
     // Calculate rewards per work period (assuming work period is livenessPeriod)
     const yearlyRewards = ethers.BigNumber.from(rewardsPerSecond).mul(ONE_YEAR);
     const availableRewards = Number(formatEther(yearlyRewards));
-    const rewardsPerWorkPeriod = availableRewards / (ONE_YEAR / livenessPeriod);
-    
+    const rewardsPerWorkPeriod =
+      livenessPeriodNumber > 0
+        ? availableRewards / (ONE_YEAR / livenessPeriodNumber)
+        : 0;
+
     // Calculate APY (simplified calculation based on minimum stake)
-    const minimumStake = Number(formatEther(minStakingDeposit));
-    const apy = minimumStake > 0 ? ((availableRewards / minimumStake) * 100) : 0;
+    const apy =
+      minStakingDepositNumber > 0
+        ? (availableRewards / minStakingDepositNumber) * 100
+        : 0;
+
+    const normalizedServiceIds = Array.isArray(serviceIds)
+      ? serviceIds.map((id: bigint | number) => Number(id))
+      : [];
 
     return {
       availableRewards,
-      maxNumServices,
-      serviceIds: serviceIds || [],
-      minimumStakingDuration: livenessPeriod,
-      minStakingDeposit: minimumStake,
+      maxNumServices: maxNumServicesNumber,
+      serviceIds: normalizedServiceIds,
+      minimumStakingDuration: livenessPeriodNumber,
+      minStakingDeposit: minStakingDepositNumber,
       apy: Math.round(apy * 100) / 100, // Round to 2 decimal places
-      olasStakeRequired: minimumStake,
+      olasStakeRequired: minStakingDepositNumber,
       rewardsPerWorkPeriod: Math.round(rewardsPerWorkPeriod * 100) / 100,
+      epochCounter: epochCounterNumber,
     };
   };
 

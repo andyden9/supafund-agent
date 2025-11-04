@@ -2,13 +2,13 @@ import { Button, Card, Typography } from 'antd';
 import { isEqual, omitBy } from 'lodash';
 import { useCallback, useContext, useMemo } from 'react';
 
-import { Pages } from '@/enums/Pages';
-import { usePageState } from '@/hooks/usePageState';
-import { useServices } from '@/hooks/useServices';
-import { Nullable } from '@/types/Util';
+import { Pages } from '@/supafund/core/enums/Pages';
+import { usePageState } from '@/supafund/core/hooks/usePageState';
+import { useServices } from '@/supafund/core/hooks/useServices';
+import { Nullable } from '@/supafund/core/types/Util';
 
-import { UpdateAgentCard } from '@/components/UpdateAgentPage/UpdateAgentCard';
-import { UpdateAgentContext } from '@/components/UpdateAgentPage/context/UpdateAgentProvider';
+import { UpdateAgentCard } from '@/supafund/ui/components/UpdateAgentPage/UpdateAgentCard';
+import { UpdateAgentContext } from '@/supafund/ui/components/UpdateAgentPage/context/UpdateAgentProvider';
 
 const { Title, Text } = Typography;
 

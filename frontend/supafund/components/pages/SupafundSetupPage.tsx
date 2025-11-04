@@ -1,13 +1,13 @@
 import { ConfigProvider, Typography } from 'antd';
 
-import { CustomAlert } from '@/components/Alert';
-import { CardFlex } from '@/components/styled/CardFlex';
-import { SetupCreateHeader } from '@/components/SetupPage/Create/SetupCreateHeader';
-import { SERVICE_TEMPLATES } from '@/constants/serviceTemplates';
-import { AgentType } from '@/enums/Agent';
-import { SetupScreen } from '@/enums/SetupScreen';
-import { useServices } from '@/hooks/useServices';
-import { LOCAL_FORM_THEME } from '@/theme';
+import { CustomAlert } from '@/supafund/ui/components/Alert';
+import { CardFlex } from '@/supafund/ui/components/styled/CardFlex';
+import { SetupCreateHeader } from '@/supafund/ui/components/SetupPage/Create/SetupCreateHeader';
+import { SERVICE_TEMPLATES } from '@/supafund/core/constants/serviceTemplates';
+import { AgentType } from '@/supafund/core/enums/Agent';
+import { SetupScreen } from '@/supafund/core/enums/SetupScreen';
+import { useServices } from '@/supafund/core/hooks/useServices';
+import { LOCAL_FORM_THEME } from '@/supafund/core/theme';
 
 import { SupafundAgentForm } from '../sections/SetupForm/SupafundAgentForm';
 

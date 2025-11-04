@@ -1,8 +1,8 @@
 import { ConfigProvider } from 'antd';
 
-import { AgentType } from '@/enums/Agent';
-import { useServices } from '@/hooks/useServices';
-import { LOCAL_FORM_THEME } from '@/theme';
+import { AgentType } from '@/supafund/core/enums/Agent';
+import { useServices } from '@/supafund/core/hooks/useServices';
+import { LOCAL_FORM_THEME } from '@/supafund/core/theme';
 
 import { SupafundUpdateSetup } from '../sections/UpdateSetup';
 
