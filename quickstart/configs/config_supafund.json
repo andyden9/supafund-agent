@@ -36,9 +36,15 @@
     "STORE_PATH": {
       "name": "Store Path",
       "description": "",
-      "value": "/data",
+      "value": "/logs",
       "provision_type": "fixed"
-  },
+    },
+    "SLOT_COUNT": {
+      "name": "Slot count",
+      "description": "",
+      "value": "2",
+      "provision_type": "fixed"
+    },
     "STAKING_CONTRACT_ADDRESS": {
       "name": "Staking contract address",
       "description": "",

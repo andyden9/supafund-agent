@@ -10,7 +10,7 @@ Supafund Quickstart 精简与文档对齐最终计划
 搭建 supafund/core 与 supafund/ui 目录结构，仅保留 Supafund 所需文件；将 Pearl 复用组件按原样迁入 Supafund，而不是继续引用 Pearl 目录。
 调整 TS path/别名，仅暴露 Supafund 所需路径；删除所有 Pearl、Optimus、Modius 等残留目录与 import。
 每裁剪一批，执行 yarn lint/test/build 及实际 UI 对比，确保视觉和交互与基线一致。
-阶段 3：Quickstart 脚本与配置调整
+✔ 阶段 3：Quickstart 脚本与配置调整
 脚本/配置标准化
 删除 pearl_daemon.py、start_pearl_daemon.sh 等 Pearl 特有脚本与文档。
 重写 quickstart/start_supafund.sh 使其仿照官方 trader 流程：环境变量提示 → poetry install → poetry run operate qs start（使用 Supafund config_supafund.json）。
