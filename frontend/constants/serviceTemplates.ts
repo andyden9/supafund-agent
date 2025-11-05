@@ -25,13 +25,13 @@ export const PREDICT_SERVICE_TEMPLATE: ServiceTemplate = {
   description: `${KPI_DESC_PREFIX} Trader agent for omen prediction markets`,
   image:
     'https://operate.olas.network/_next/image?url=%2Fimages%2Fprediction-agent.png&w=3840&q=75',
-  service_version: 'v0.27.2-rc.1',
+  service_version: 'v0.27.3',
   agent_release: {
     is_aea: true,
     repository: {
       owner: 'valory-xyz',
       name: 'trader',
-      version: 'v0.27.2-rc.1',
+      version: 'v0.27.3',
     },
   },
   home_chain: MiddlewareChain.GNOSIS,
@@ -640,17 +640,17 @@ export const OPTIMUS_SERVICE_TEMPLATE: ServiceTemplate = {
 export const SUPAFUND_SERVICE_TEMPLATE: ServiceTemplate = {
   agentType: AgentType.Supafund,
   name: 'Supafund Agent',
-  hash: 'bafybeia4hfaxw7f7cb6xykugsz35ukvu72rwm263bxdxftmhjizvm6zlue',
+  hash: 'bafybeieb2t5mmrzm6jq5mzt626oxo4n66z7ifylzu3acbrlo4oor5y22se',
   description: `${KPI_DESC_PREFIX} Predicts whether emerging projects will achieve key milestones, providing detailed AI-powered analysis`,
   image:
     'https://www.supafund.xyz/_next/image?url=%2F_next%2Fstatic%2Fmedia%2Flight.71a38e21.png&w=64&q=75',
-  service_version: 'v0.27.2',
+  service_version: 'v0.27.3',
   agent_release: {
     is_aea: true,
     repository: {
       owner: 'valory-xyz',
       name: 'trader',
-      version: 'v0.27.2',
+      version: 'v0.27.3',
     },
   },
   home_chain: MiddlewareChain.GNOSIS,
@@ -674,6 +674,12 @@ export const SUPAFUND_SERVICE_TEMPLATE: ServiceTemplate = {
     // Inherit most environment variables from PREDICT_SERVICE_TEMPLATE
     ...PREDICT_SERVICE_TEMPLATE.env_variables,
     // Add Supafund-specific environment variables
+    RPC_0: {
+      name: 'Gnosis RPC (RPC_0)',
+      description: 'RPC endpoint used by the ledger connection inside the container',
+      value: '',
+      provision_type: EnvProvisionType.USER,
+    },
     SUPAFUND_WEIGHTS: {
       name: 'Supafund agent weights configuration',
       description:

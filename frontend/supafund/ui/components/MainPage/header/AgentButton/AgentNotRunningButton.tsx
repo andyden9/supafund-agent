@@ -71,9 +71,7 @@ const useServiceDeployment = () => {
 
   const { masterSafesOwners } = useMultisigs(masterSafes);
 
-  const { isInitialFunded, needsInitialFunding } = useNeedsFunds(
-    selectedStakingProgramId,
-  );
+  const { needsInitialFunding } = useNeedsFunds(selectedStakingProgramId);
 
   const isDeployable = useMemo(() => {
     if (isBalancesAndFundingRequirementsLoading) return false;
@@ -98,10 +96,8 @@ const useServiceDeployment = () => {
     // If was evicted and can't re-stake - return false
     if (isAgentEvicted && !isEligibleForStaking) return false;
 
-    // if there's no service created, check if initially funded
-    // TODO: should create dummy service instead (for trader)
-    // and rely on canStartAgent
-    if (!selectedService && isInitialFunded) return !needsInitialFunding;
+    // 如果尚未创建服务，只要初始资金到位即可允许启动，会在后续流程中自动创建
+    if (!selectedService) return !needsInitialFunding;
 
     // allow starting based on refill requirements
     return canStartAgent;
@@ -118,7 +114,6 @@ const useServiceDeployment = () => {
     isAgentEvicted,
     isEligibleForStaking,
     selectedService,
-    isInitialFunded,
     needsInitialFunding,
     canStartAgent,
   ]);

@@ -1,9 +1,9 @@
 {
   "name": "Supafund Agent",
-  "hash": "bafybeia4hfaxw7f7cb6xykugsz35ukvu72rwm263bxdxftmhjizvm6zlue",
+  "hash": "bafybeieb2t5mmrzm6jq5mzt626oxo4n66z7ifylzu3acbrlo4oor5y22se",
   "description": "Predicts whether emerging projects will achieve key milestones, providing detailed AI-powered analysis",
   "image": "https://operate.olas.network/_next/image?url=%2Fimages%2Fprediction-agent.png&w=3840&q=75",
-  "service_version": "v0.27.2",
+  "service_version": "v0.27.3",
   "home_chain": "gnosis",
   "configurations": {
     "gnosis": {
@@ -27,6 +27,18 @@
       "value": "https://gnosis-mainnet.g.alchemy.com/v2/k72mJduMTVP0-6rwv2f1m",
       "provision_type": "fixed"
     },
+    "RPC_0": {
+      "name": "Gnosis RPC (RPC_0)",
+      "description": "RPC endpoint used by the ledger connection inside the container",
+      "value": "https://gnosis-mainnet.g.alchemy.com/v2/k72mJduMTVP0-6rwv2f1m",
+      "provision_type": "fixed"
+    },
+    "STORE_PATH": {
+      "name": "Store Path",
+      "description": "",
+      "value": "/data",
+      "provision_type": "fixed"
+  },
     "STAKING_CONTRACT_ADDRESS": {
       "name": "Staking contract address",
       "description": "",
@@ -43,7 +55,7 @@
       "name": "Mech contract address",
       "description": "",
       "value": "",
-      "provision_type": "computed"
+      "provision_type": "computed"  
     },
     "PRIORITY_MECH_ADDRESS": {
       "name": "Priority Mech contract address",
@@ -210,7 +222,7 @@
     "GNOSIS_STAKING_SUBGRAPH_URL": {
       "name": "Gnosis staking subgraph URL",
       "description": "The Graph endpoint used to query gnosis staking data",
-      "value": "https://gateway.thegraph.com/api/{SUBGRAPH_API_KEY}/subgraphs/id/F3iqL2iw5UTrP1qbb4S694pGEkBwzoxXp1TRikB2K4e",
+      "value": "https://gateway.thegraph.com/api/b00a9d09ae090a4224b23c201f697661/subgraphs/id/F3iqL2iw5UTrP1qbb4S694pGEkBwzoxXp1TRikB2K4e",
       "provision_type": "user"
     }
   }

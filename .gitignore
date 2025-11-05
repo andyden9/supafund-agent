@@ -150,3 +150,10 @@ dist
 **/__pycache__
 /quickstart/.operate-main
 /quickstart/.operate
+/quickstart/.operate-10u
+/quickstart/.operate-5u
+/quickstart/trader-0.27.3
+/quickstart/.operate-9u
+/quickstart/.operate-6u
+/quickstart/.operate-7u
+quickstart/docs/trader_0.27.2_to_0.27.3.diff

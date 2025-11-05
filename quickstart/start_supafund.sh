@@ -36,6 +36,16 @@ if [ -n "$PACKAGING_CONSTRAINT_FILE" ]; then
     export PIP_CONSTRAINT="$PACKAGING_CONSTRAINT_FILE"
 fi
 
+# 若缺少 .env，提供默认 STORE_PATH，避免容器内 /data 写权限问题
+if [ ! -f ".env" ]; then
+    cat <<'EOF' > .env
+# Default store path used when not provided by the user.
+# /tmp exists and is writable inside the docker image.
+STORE_PATH=/tmp/
+EOF
+    echo "已生成 quickstart/.env（STORE_PATH=/tmp/）。如需自定义，请编辑该文件后重试。"
+fi
+
 # 启动服务
 ./run_service.sh configs/config_supafund.json
 RUN_SERVICE_EXIT=$?
