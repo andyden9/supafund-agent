@@ -4,7 +4,6 @@ import { AddFundsToMasterSafeThroughBridge } from '@/supafund/ui/components/AddF
 import { LowOperatingBalanceBridgeFunds } from '@/supafund/ui/components/AddFundsThroughBridge/LowOperatingBalanceBridgeFunds';
 import { LowSafeSignerBalanceBridgeFunds } from '@/supafund/ui/components/AddFundsThroughBridge/LowSafeSignerBalanceBridgeFunds';
 import { AgentActivityPage } from '@/supafund/ui/components/AgentActivity';
-import { AgentSelection } from '@/supafund/ui/components/AgentSelection';
 import { Main } from '@/supafund/ui/components/MainPage';
 import { ManageStakingPage } from '@/supafund/ui/components/ManageStakingPage';
 import { AddBackupWalletViaSafePage } from '@/supafund/ui/components/Pages/AddBackupWalletViaSafePage';
@@ -111,11 +110,9 @@ export default function Home() {
   const page = useMemo(() => {
     switch (pageState) {
       case Pages.Setup:
-        return <Setup />;
+        return <Main />;
       case Pages.Main:
         return <Main />;
-      case Pages.SwitchAgent:
-        return <AgentSelection onPrev={() => goto(Pages.Main)} />;
       case Pages.Settings:
         return <Settings />;
       case Pages.HelpAndSupport:

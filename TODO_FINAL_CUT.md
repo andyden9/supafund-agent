@@ -3,7 +3,7 @@ Supafund Quickstart 精简与文档对齐最终计划
 概览：本计划旨在把当前含 Pearl 定制的 Supafund Quickstart 收敛为“官方 Trader Quickstart + Supafund 参数”的标准形态。核心任务包括：依《TODO_SUPAFUND_FRONTEND_REDUCTION.md》裁剪前端，仅保留 Supafund 所需代码且保持像素级一致；统一脚本与配置（public_id `supafund/trader:0.1.0`，hash `bafybeieb2t5mmrzm6jq5mzt626oxo4n66z7ifylzu3acbrlo4oor5y22se`，端口 8716，STORE_PATH `/data` 等）满足 Pearl 文档《Integrating Your AI Agent with Pearl》《Agent integration checklist》要求；提供镜像构建/推送指引；确保用户仅需运行 `./start_supafund.sh` 即可完成部署并访问 http://localhost:3000 与 http://localhost:8716。以下各阶段须按序执行并通过对应验证。
 
 阶段 0：建立基线
-切分支 feature/supafund-quickstart-trim，执行 yarn install && yarn lint && yarn test && yarn build；运行一次现有 ./start_supafund.sh，保存日志+关键页面截图，确认当前 Supafund 版本可正常跑通（后续作为回归基准）。
+执行 yarn install && yarn lint && yarn test && yarn build；运行一次现有 ./start_supafund.sh，保存日志+关键页面截图，确认当前 Supafund 版本可正常跑通（后续作为回归基准）。
 阶段 1：梳理 Supafund 依赖
 对 frontend/supafund/** 做 import 扫描，形成依赖清单（组件、上下文、服务、样式）；标注用途和与 Pearl/其他 agent 的耦合情况，给出“保留/迁移/替换/删除”策略，并存档做为裁剪过程中唯一参照。
 阶段 2：精简前端（遵循《TODO_SUPAFUND_FRONTEND_REDUCTION.md》）
@@ -24,7 +24,7 @@ STORE_PATH=/data、healthcheck、log、私钥等与 Pearl 官方要求一致。
 镜像发布说明
 使用 poetry run autonomy build-image supafund/trader:0.1.0:<hash> + docker tag + docker push supafund/oar-trader:<hash>；
 保留 docs/docker_image_publish.md 作为镜像同步指引，文档需纳入 README 链接。
-阶段 4：文档改造（对比现有 README 与官方要求）
+✔ 阶段 4：文档改造（对比现有 README 与官方要求）
 quickstart/README.md
 改为 Supafund 专用说明：系统要求 -> 环境变量 -> ./start_supafund.sh 流程 -> UI 访问 (http://localhost:3000 & http://localhost:8716)。
 删除与 Trader/Mech/Optimus 等无关段落，保留 staking、资金补充等 Pearl 原生功能说明，并引用官方 Pearl 集成文档（健康检查、STORE_PATH、日志等）。

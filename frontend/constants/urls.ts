@@ -3,9 +3,10 @@ import { EvmChainId } from '@/enums/Chain';
 
 type Url = `http${'s' | ''}://${string}`;
 
-export const BACKEND_URL: Url = `http://localhost:${process.env.NODE_ENV === 'production' ? 8765 : 8000}/api`;
+const BACKEND_PORT = 8000;
+export const BACKEND_URL: Url = `http://localhost:${BACKEND_PORT}/api`;
 
-export const BACKEND_URL_V2: Url = `http://localhost:${process.env.NODE_ENV === 'production' ? 8765 : 8000}/api/v2`;
+export const BACKEND_URL_V2: Url = `http://localhost:${BACKEND_PORT}/api/v2`;
 
 // olas.network
 export const PEARL_URL: Url = 'https://olas.network/pearl';

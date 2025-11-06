@@ -1,9 +1,7 @@
 import { Divider, Flex, Typography } from 'antd';
 import { useCallback, useMemo } from 'react';
 
-import { Pages } from '@/supafund/core/enums/Pages';
 import { SetupScreen } from '@/supafund/core/enums/SetupScreen';
-import { usePageState } from '@/supafund/core/hooks/usePageState';
 import { useServices } from '@/supafund/core/hooks/useServices';
 import { useSetup } from '@/supafund/core/hooks/useSetup';
 import { useSharedContext } from '@/supafund/core/hooks/useSharedContext';
@@ -79,7 +77,6 @@ const Introduction = ({
  */
 export const AgentIntroduction = () => {
   const { goto } = useSetup();
-  const { goto: gotoPage } = usePageState();
   const { selectedAgentType, selectedAgentConfig } = useServices();
 
   const introductionSteps = useMemo(() => {
@@ -101,7 +98,8 @@ export const AgentIntroduction = () => {
 
     // if agent is under construction, goes back to agent selection
     if (selectedAgentConfig.isUnderConstruction) {
-      gotoPage(Pages.SwitchAgent);
+      goto(SetupScreen.AgentSelection);
+      return;
     }
 
     // If the selected type requires setting up an agent,
@@ -115,7 +113,7 @@ export const AgentIntroduction = () => {
     } else {
       goto(SetupScreen.SetupEoaFunding);
     }
-  }, [goto, gotoPage, selectedAgentConfig]);
+  }, [goto, selectedAgentConfig, selectedAgentType]);
 
   return (
     <>

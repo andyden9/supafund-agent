@@ -11,6 +11,10 @@ agent: valory/trader:0.1.0:bafybeidoramegbvpa66p36ylznvkz42sqrgs3m4lkrfozkf74d6k
 number_of_agents: 1
 deployment:
   agent:
+    extra_volumes:
+      ./persistent_data/logs: /logs
+      ./persistent_data/data: /data
+      ./persistent_data/benchmarks: /benchmarks
     ports:
       0:
         8716: 8716

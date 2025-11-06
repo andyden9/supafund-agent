@@ -4,6 +4,76 @@ set -euo pipefail
 
 ROOT_DIR="$(cd "$(dirname "${BASH_SOURCE[0]}")" && pwd)"
 CONFIG_PATH="${ROOT_DIR}/configs/config_supafund.json"
+BACKEND_HOST="${BACKEND_HOST:-0.0.0.0}"
+BACKEND_PORT="${BACKEND_PORT:-8000}"
+BACKEND_PID=""
+
+is_backend_healthy() {
+  poetry run python - <<'PY' "${BACKEND_HOST}" "${BACKEND_PORT}"
+import socket
+import sys
+
+host = sys.argv[1]
+port = int(sys.argv[2])
+targets = [host]
+if host in ("0.0.0.0", "::"):
+    targets.append("127.0.0.1")
+    targets.append("::1")
+
+for target in targets:
+    try:
+        with socket.create_connection((target, port), timeout=0.5):
+            sys.exit(0)
+    except OSError:
+        continue
+
+sys.exit(1)
+PY
+}
+
+wait_for_backend() {
+  local retries=30
+  while ! is_backend_healthy; do
+    retries=$((retries - 1))
+    if [ ${retries} -le 0 ]; then
+      echo "❌ Supafund backend failed to become healthy on port ${BACKEND_PORT}."
+      echo "   查看 .operate/supafund_backend.log 获取更多信息。"
+      return 1
+    fi
+    sleep 1
+  done
+  return 0
+}
+
+stop_backend() {
+  if [ -n "${BACKEND_PID}" ] && kill -0 "${BACKEND_PID}" >/dev/null 2>&1; then
+    kill "${BACKEND_PID}" >/dev/null 2>&1 || true
+    wait "${BACKEND_PID}" >/dev/null 2>&1 || true
+  fi
+}
+
+start_backend() {
+  if is_backend_healthy >/dev/null 2>&1; then
+    echo "✅ 检测到已有 Supafund 后端在端口 ${BACKEND_PORT} 上运行，跳过启动。"
+    return 0
+  fi
+
+  mkdir -p .operate
+  local log_file=".operate/supafund_backend.log"
+  echo "启动 Supafund 后端 (监听 ${BACKEND_HOST}:${BACKEND_PORT})…"
+  poetry run python supafund_backend.py --host "${BACKEND_HOST}" --port "${BACKEND_PORT}" >"${log_file}" 2>&1 &
+  BACKEND_PID=$!
+  echo "${BACKEND_PID}" > .operate/supafund_backend.pid
+
+  if ! wait_for_backend; then
+    stop_backend
+    return 1
+  fi
+
+  echo "Supafund 后端已启动。日志: ${log_file}"
+  trap stop_backend EXIT
+  return 0
+}
 
 ensure_docker_access() {
   if ! command -v docker >/dev/null 2>&1; then
@@ -135,12 +205,61 @@ import sys
 from pathlib import Path
 
 compose_path = Path(sys.argv[1])
-# No structural changes required; ensure file exists.
-compose_path.write_text(compose_path.read_text())
+text = compose_path.read_text()
+
+if "volumes:\n" not in text:
+    compose_path.write_text(text)
+    sys.exit(0)
+
+logs_variants = [
+    "    - ./persistent_data/logs:/logs:Z",
+    "    - ./persistent_data/logs:/logs",
+]
+data_variants = [
+    "    - ./persistent_data/data:/data:Z",
+    "    - ./persistent_data/data:/data",
+]
+bench_variants = [
+    "    - ./persistent_data/benchmarks:/benchmarks:Z",
+    "    - ./persistent_data/benchmarks:/benchmarks",
+]
+
+logs_entry = logs_variants[0]
+data_entry = data_variants[0]
+bench_entry = bench_variants[0]
+
+def find_variant(source, variants):
+    for variant in variants:
+        if variant in source:
+            return variant
+    return None
+
+logs_line = find_variant(text, logs_variants)
+if logs_line is None:
+    text = text.replace("volumes:\n", "volumes:\n" + logs_entry + "\n", 1)
+
+logs_line = find_variant(text, logs_variants)
+
+data_line = find_variant(text, data_variants)
+if data_line is None and logs_line is not None:
+    text = text.replace(logs_line, logs_line + "\n" + data_entry, 1)
+
+logs_line = find_variant(text, logs_variants)
+data_line = find_variant(text, data_variants)
+bench_line = find_variant(text, bench_variants)
+
+if bench_line is None:
+    anchor = data_line if data_line is not None else logs_line
+    if anchor is not None:
+        text = text.replace(anchor, anchor + "\n" + bench_entry, 1)
+
+compose_path.write_text(text)
 PY
 
-  mkdir -p "${deploy_dir}/persistent_data/data"
-  chmod 777 "${deploy_dir}/persistent_data/data"
+  bash "${ROOT_DIR}/scripts/sync_supafund_ui.sh" "${compose_file}"
+
+  mkdir -p "${deploy_dir}/persistent_data/data" "${deploy_dir}/persistent_data/benchmarks"
+  chmod 777 "${deploy_dir}/persistent_data/data" "${deploy_dir}/persistent_data/benchmarks"
 
   if [ -f "${deploy_dir}/agent_0.env" ]; then
     python - <<'PY' "${deploy_dir}/agent_0.env"
@@ -157,7 +276,7 @@ for idx, line in enumerate(lines):
     key, value = line.split("=", 1)
     index_map[key] = idx
     if key.endswith("STORE_PATH"):
-        lines[idx] = f"{key}=/logs"
+        lines[idx] = f"{key}=/data"
 
 slot_key = "SKILL_TRADER_ABCI_MODELS_PARAMS_ARGS_SLOT_COUNT"
 if slot_key in index_map:
@@ -166,9 +285,9 @@ else:
     lines.append(f"{slot_key}=2")
 
 if "STORE_PATH" in index_map:
-    lines[index_map["STORE_PATH"]] = "STORE_PATH=/logs"
+    lines[index_map["STORE_PATH"]] = "STORE_PATH=/data"
 else:
-    lines.append("STORE_PATH=/logs")
+    lines.append("STORE_PATH=/data")
 
     required_store_keys = [
         "SKILL_STAKING_ABCI_MODELS_PARAMS_ARGS_STORE_PATH",
@@ -180,9 +299,19 @@ else:
 
     for key in required_store_keys:
         if key in index_map:
-            lines[index_map[key]] = f"{key}=/logs"
+            lines[index_map[key]] = f"{key}=/data"
         else:
-            lines.append(f"{key}=/logs")
+            lines.append(f"{key}=/data")
+
+    benchmark_keys = [
+        "SKILL_TRADER_ABCI_MODELS_BENCHMARK_TOOL_ARGS_LOG_DIR",
+    ]
+
+    for key in benchmark_keys:
+        if key in index_map:
+            lines[index_map[key]] = f"{key}=/benchmarks"
+        else:
+            lines.append(f"{key}=/benchmarks")
 
 patched = "\n".join(lines) + ("\n" if text.endswith("\n") else "")
 path.write_text(patched)
@@ -231,12 +360,18 @@ ensure_supafund_image
 cleanup_stale_networks
 
 export STORE_PATH="/logs"
+export PYTHONPATH="${ROOT_DIR}/patches:${PYTHONPATH:-}"
 
 before_compose="$(mktemp)"
 collect_compose_files "${before_compose}"
 
 echo "Installing dependencies with poetry…"
 poetry install --only main --no-interaction --no-ansi
+
+if ! start_backend; then
+  echo "❌ 无法启动 Supafund 后端，请检查上述日志后重试。"
+  exit 1
+fi
 
 echo ""
 echo "Launching the Supafund service through Quickstart…"

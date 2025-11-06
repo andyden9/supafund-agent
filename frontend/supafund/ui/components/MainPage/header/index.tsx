@@ -1,44 +1,26 @@
-import { Flex } from 'antd';
-import { useCallback, useEffect, useState } from 'react';
+import { Flex, Typography } from 'antd';
+import { useCallback, useMemo, useState } from 'react';
 
-import { MiddlewareDeploymentStatus } from '@/supafund/core/client';
 import { CardSection } from '@/supafund/ui/components/styled/CardSection';
-import { useBalanceContext } from '@/supafund/core/hooks/useBalanceContext';
-import { useElectronApi } from '@/supafund/core/hooks/useElectronApi';
-import { useService } from '@/supafund/core/hooks/useService';
 import { useServices } from '@/supafund/core/hooks/useServices';
 
 import { FirstRunModal } from '../modals/FirstRunModal';
 import { AgentButton } from './AgentButton/AgentButton';
 import { AgentHead } from './AgentHead';
-import { SwitchAgentButton } from './SwitchAgentButton';
+import { SupafundSettingsButton } from './SupafundDashboardButton';
 
-const useSetupTrayIcon = () => {
-  const { isLowBalance } = useBalanceContext();
-  const { selectedService } = useServices();
-  const { deploymentStatus } = useService(selectedService?.service_config_id);
-  const { setTrayIcon } = useElectronApi();
-
-  useEffect(() => {
-    if (isLowBalance) {
-      setTrayIcon?.('low-gas');
-    } else if (deploymentStatus === MiddlewareDeploymentStatus.DEPLOYED) {
-      setTrayIcon?.('running');
-    } else if (deploymentStatus === MiddlewareDeploymentStatus.STOPPED) {
-      setTrayIcon?.('paused');
-    } else if (deploymentStatus === MiddlewareDeploymentStatus.BUILT) {
-      setTrayIcon?.('logged-out');
-    }
-  }, [isLowBalance, deploymentStatus, setTrayIcon]);
-
-  return null;
-};
+const { Text } = Typography;
 
 export const MainHeader = () => {
   const [isFirstRunModalOpen, setIsFirstRunModalOpen] = useState(false);
   const handleModalClose = useCallback(() => setIsFirstRunModalOpen(false), []);
-
-  useSetupTrayIcon();
+  const { selectedService } = useServices();
+  const serviceLabel = useMemo(() => {
+    if (!selectedService?.service_config_id) {
+      return 'Supafund Agent';
+    }
+    return selectedService.name ?? 'Supafund Agent';
+  }, [selectedService]);
 
   return (
     <CardSection gap={6} padding="12px 20px">
@@ -50,6 +32,14 @@ export const MainHeader = () => {
         {/* Left: Agent info and main control */}
         <Flex justify="start" align="center" gap={12}>
           <AgentHead />
+          <Flex vertical gap={0}>
+            <Text strong style={{ lineHeight: 1 }}>
+              {serviceLabel}
+            </Text>
+            <Text type="secondary" style={{ fontSize: 12 }}>
+              Supafund staking companion
+            </Text>
+          </Flex>
           <AgentButton />
           <FirstRunModal
             open={isFirstRunModalOpen}
@@ -59,7 +49,7 @@ export const MainHeader = () => {
 
         {/* Right: Compact action buttons */}
         <Flex gap={6} align="center">
-          <SwitchAgentButton />
+          <SupafundSettingsButton />
         </Flex>
       </Flex>
     </CardSection>

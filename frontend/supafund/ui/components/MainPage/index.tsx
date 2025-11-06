@@ -14,7 +14,6 @@ import { KeepAgentRunningSection } from './sections/KeepAgentRunningSection';
 import { MainOlasBalance } from './sections/OlasBalanceSection';
 import { RewardsSection } from './sections/RewardsSection';
 import { StakingContractSection } from './sections/StakingContractUpdate';
-import { SwitchAgentSection } from './sections/SwitchAgentSection';
 
 export const Main = () => {
   const { selectedAgentType } = useServices();
@@ -39,7 +38,6 @@ export const Main = () => {
       style={{ borderTopColor: 'transparent' }}
     >
       <Flex vertical>
-        <SwitchAgentSection />
         <MainHeader />
         <AlertSections />
         <MainOlasBalance />

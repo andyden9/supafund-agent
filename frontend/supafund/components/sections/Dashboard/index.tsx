@@ -1,5 +1,4 @@
-import { ArrowLeftOutlined } from '@ant-design/icons';
-import { Button, Card, Empty, Spin, Tabs, Typography } from 'antd';
+import { Card, Empty, Spin, Tabs, Typography } from 'antd';
 import { useMemo } from 'react';
 
 import { MiddlewareDeploymentStatus } from '@/supafund/core/client';
@@ -63,23 +62,6 @@ export const SupafundDashboard = ({
 
   return (
     <CardFlex $noBorder style={{ overflowX: 'hidden' }}>
-      {!hideBackButton && (
-        <div style={{ marginBottom: '20px' }}>
-          <Button
-            icon={<ArrowLeftOutlined />}
-            onClick={() => goto(Pages.SwitchAgent)}
-            type="text"
-            style={{
-              padding: '4px 8px',
-              color: '#666',
-              fontSize: '14px',
-            }}
-          >
-            Switch Agent
-          </Button>
-        </div>
-      )}
-
       <div style={{ marginBottom: '20px' }}>
         <DashboardHeader
           agentName={selectedAgentConfig.displayName}

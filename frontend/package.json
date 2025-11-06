@@ -59,7 +59,8 @@
     "lint": "next lint",
     "test": "jest",
     "start": "next start",
-    "check": "yarn run lint && tsc --noEmit --incremental false"
+    "check": "yarn run lint && tsc --noEmit --incremental false",
+    "supafund:export": "node supafund/scripts/export_to_predict_ui_build.cjs"
   },
   "version": "0.1.0"
 }

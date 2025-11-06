@@ -74,7 +74,7 @@ export interface UserPosition {
 }
 
 // 统一的 Supafund 市场创建者地址（用于过滤 Omen 市场）
-const SUPAFUND_CREATOR = '0xf765a1FE2E15d0246430CCE854D2c923a85AF388';
+const SUPAFUND_CREATOR = '0x89c5cc945dd550BcFfb72Fe42BfF002429F46Fec';
 
 // 查询用户的交易历史
 export const queryUserTrades = async (userAddress: string): Promise<TradeData[]> => {

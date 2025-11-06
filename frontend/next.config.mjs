@@ -1,6 +1,7 @@
 /** @type {import('next').NextConfig} */
 const nextConfig = {
   images: {
+    unoptimized: true,
     remotePatterns: [
       {
         protocol: 'http',
@@ -66,6 +67,7 @@ const nextConfig = {
     MODE_RPC: process.env.MODE_RPC,
     CELO_RPC: process.env.CELO_RPC,
   },
+  output: 'export',
 };
 
 export default nextConfig;
